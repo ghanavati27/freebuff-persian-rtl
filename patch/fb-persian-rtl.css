@@ -1,0 +1,119 @@
+/* ============================================================================
+   Freebuff Desktop - Persian / RTL support patch  (style half)
+   ----------------------------------------------------------------------------
+   Local patch. NOT part of the shipped bundle. Re-applied after app updates.
+
+   The direction work is done by the companion script (fb-persian-rtl.js), which
+   sets dir="auto" on the app's text-bearing elements. This file only adds the
+   Persian font and a few rules keyed on :dir(rtl), so an LTR user's rendering
+   stays the shipped one.
+   ========================================================================== */
+
+/* ---------------------------------------------------------------------------
+   1) Persian webfont.
+   unicode-range limits it to Arabic-script code points, so Latin text keeps
+   using Google Sans exactly as before; only Persian/Arabic glyphs switch.
+   --------------------------------------------------------------------------- */
+@font-face {
+  font-family: "Vazirmatn FB";
+  src: url("./fb-vazirmatn-400.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0600-06FF, U+0750-077F, U+08A0-08FF, U+FB50-FDFF,
+    U+FE70-FEFF, U+200C-200D;
+}
+@font-face {
+  font-family: "Vazirmatn FB";
+  src: url("./fb-vazirmatn-500.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0600-06FF, U+0750-077F, U+08A0-08FF, U+FB50-FDFF,
+    U+FE70-FEFF, U+200C-200D;
+}
+@font-face {
+  font-family: "Vazirmatn FB";
+  src: url("./fb-vazirmatn-700.woff2") format("woff2");
+  font-weight: 600 700;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0600-06FF, U+0750-077F, U+08A0-08FF, U+FB50-FDFF,
+    U+FE70-FEFF, U+200C-200D;
+}
+
+:root {
+  --font-sans: "Vazirmatn FB", "Google Sans", system-ui, -apple-system,
+    BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+}
+
+/* ---------------------------------------------------------------------------
+   2) Alignment.
+   The bundle hard-codes text-align:left in places (.question-option, .qbody,
+   .prose td/th, ...). `dir="auto"` sets the direction but cannot undo that, so
+   neutralise it - but ONLY on elements this patch marked AND that actually
+   resolved to RTL. An LTR element never matches :dir(rtl), so the shipped rule
+   stands untouched for an English-speaking user.
+   --------------------------------------------------------------------------- */
+[dir="auto"]:dir(rtl) {
+  text-align: start;
+}
+
+/* The bundle hard-codes text-align:left on .question-option. Direction is
+   inherited from the marked .question card, but an explicit rule beats
+   inheritance, so reset it for RTL cards. */
+.question:dir(rtl) .question-option {
+  text-align: start;
+}
+
+/* The collapsed reasoning preview is a flex:1 box, so text-align decides where
+   its text sits inside it. Keep it next to the "Thinking" label in both
+   directions; only its internal bidi order should follow the content. */
+.reasoning-preview:dir(rtl) {
+  text-align: left;
+}
+
+/* .prose th/td carry an explicit text-align:left, which beats the direction
+   they inherit from the marked table. */
+.prose table:dir(rtl) :is(th, td) {
+  text-align: start;
+}
+
+/* ---------------------------------------------------------------------------
+   3) Lists and blockquotes.
+   The bundle reserves the ::marker's room with padding-left and draws the quote
+   bar with border-left. In RTL both have to move to the right side.
+
+   These are keyed on :has(...) rather than on the element's own dir="auto",
+   because a dir="auto" element whose text lives entirely inside other
+   dir="auto" descendants is skipped when the browser resolves that element's
+   own direction - it would fall back to LTR and the marker would be stranded.
+   --------------------------------------------------------------------------- */
+.prose ul:has(> li:dir(rtl)),
+.prose ol:has(> li:dir(rtl)) {
+  padding-left: 0;
+  padding-right: 24px;
+}
+
+.prose blockquote:has(> :dir(rtl)) {
+  border-left: none;
+  border-right: 3px solid var(--border);
+}
+
+/* ---------------------------------------------------------------------------
+   4) Code and terminals stay left-to-right even when they sit inside RTL
+   content - a fenced block inside a Persian blockquote or list item, for
+   instance. :dir(rtl) only matches when the element actually inherited RTL,
+   so an LTR code block is never touched.
+   --------------------------------------------------------------------------- */
+pre:dir(rtl),
+code:dir(rtl),
+kbd:dir(rtl),
+samp:dir(rtl),
+.cm-editor:dir(rtl),
+.xterm:dir(rtl),
+.md-code:dir(rtl),
+.md-pre:dir(rtl) {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
