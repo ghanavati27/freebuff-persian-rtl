@@ -50,6 +50,12 @@
        Latin-first option stay LTR inside a Persian question, which then also
        leaves its Persian description left-aligned. */
     '.question', '.question-plan', '.plan-action',
+    /* Freebuff 0.0.174: the "What went wrong?" verdict note is a user-typed
+       textarea, so it needs the same dir="auto" treatment as the composer. */
+    '.msg-verdict-note',
+    /* Freebuff 0.0.174: sponsored intermission headline/subhead are the only
+       new surface whose text is served from outside the app bundle. */
+    '.intermission-headline', '.intermission-subhead',
     /* agent to-do dock.
        Mark the LIST, not each row: a list is one unit, so an item whose text
        starts with a Latin word would otherwise flip back to LTR and leave its

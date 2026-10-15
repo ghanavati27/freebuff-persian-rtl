@@ -51,7 +51,7 @@ from the patch files themselves and confirms it still appears in the shipped
 bundle:
 
 ```
-selectors  : 71/71 still present in the bundle
+selectors  : 74/74 still present in the bundle  (after 0.0.174 additions)
 ```
 
 A count below `N/N` means a release renamed or removed a class. Re-derive it per
@@ -63,3 +63,16 @@ A count below `N/N` means a release renamed or removed a class. Re-derive it per
 |---|---|
 | `.text-attachment-card` | **Removed** in 0.0.173. The real attachment classes are `.composer-attachment-menu` / `.composer-attachment-options`; the dead selector was replaced, and the health check is green again. |
 | `.question-chip`, `.qbody` panel rows | Not fixable with CSS: their text is an unnamed flex child, so reaching it needs an unkeyed rule that would also hit English rows. |
+
+## Freebuff 0.0.174 additions
+
+Scanned every class with direct text children in the new bundle. Of 92 not yet
+covered, all were English app chrome; only two surfaces were worth adding:
+
+| Selector | Why |
+|---|---|
+| `.msg-verdict-note` | The "What went wrong?" verdict note is a user-typed textarea, so it needs `dir="auto"` like the composer. |
+| `.intermission-headline`, `.intermission-subhead` | Sponsored intermission copy - the only new surface whose text is served from outside the app bundle. |
+
+Both are `:dir(rtl)`-gated in effect (they only match once `dir="auto"` resolves
+to RTL), so an English-speaking user is unaffected.

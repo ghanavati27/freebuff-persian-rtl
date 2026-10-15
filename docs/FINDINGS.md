@@ -88,3 +88,16 @@ refuted by measurement, and the measurement is what stands:
 
 Record a contradiction like this in the same format rather than repeating the
 claim.
+
+## Update log
+
+### 0.0.174
+- App updated; bundle renamed (`index-B6bNCncr.js` / `index-9qF84wBi.css`). The
+  installer reads the bundle names out of `index.html`, so no script change was
+  needed.
+- New `ui/fonts/` (Google Sans, DM Mono, Outfit now bundled locally, previously
+  a CDN) and `ui/wallpapers/` - no impact on the patch.
+- All 71 previous selectors still present; 3 added (`.msg-verdict-note`,
+  `.intermission-headline`, `.intermission-subhead`). Health check 74/74.
+- Scanned all 92 uncovered classes that carry text directly: the rest are
+  English app chrome and deliberately left alone.
