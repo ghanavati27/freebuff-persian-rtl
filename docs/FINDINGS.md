@@ -109,3 +109,12 @@ claim.
 - Bundle scan found 94 uncovered classes carrying text directly; all are English
   app chrome (crash notice, file-viewer hints, model picker, sponsored-offer
   status). None carry user or model text, so none were added.
+
+### 0.0.179
+- App updated; bundle renamed (`index-0IEXXOd1.js` / `index-Dp2LqzE9.css`).
+- All 74 selectors still present - **no patch change needed**. Patch re-applied,
+  `index.html` re-tagged (backup refreshed), health check 74/74.
+- Bundle scan: 101 uncovered classes carrying text directly (up from 94). The 7
+  new ones (`.freebucks-intro-price-heading`, `.profile-survey-*`,
+  `.workspace-codebase-*`) are English app chrome - a rewards/survey permission
+  flow and a project picker. None carry user or model text, so none were added.
