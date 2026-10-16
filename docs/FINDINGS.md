@@ -101,3 +101,11 @@ claim.
   `.intermission-headline`, `.intermission-subhead`). Health check 74/74.
 - Scanned all 92 uncovered classes that carry text directly: the rest are
   English app chrome and deliberately left alone.
+
+### 0.0.176
+- App updated; bundle renamed (`index-tvbzIkU3.js` / `index-00nrfH8Q.css`).
+- All 74 selectors still present - **no patch change needed**. Patch re-applied,
+  `index.html` re-tagged (backup refreshed), health check 74/74.
+- Bundle scan found 94 uncovered classes carrying text directly; all are English
+  app chrome (crash notice, file-viewer hints, model picker, sponsored-offer
+  status). None carry user or model text, so none were added.
