@@ -73,9 +73,14 @@ These are not style preferences. Violating them breaks the app or its users.
 | Updater state | `%APPDATA%\Roaming\Freebuff\update-state.json` |
 
 The bundle file names change on every release, so **never hard-code them**. Read
-them out of `index.html` (`<link href="./assets/index-XXX.css">`,
-`<script src="./assets/index-YYY.js">`). `apply_fb_persian_patch.py` already
-does this; keep it that way.
+them out of `index.html`. Both the names *and the path style* vary: 0.0.173 and
+earlier used relative hrefs (`<link href="./assets/index-XXX.css">`), 0.0.180
+uses absolute ones (`<link href="/assets/index-XXX.css">`), and the
+`<script>`/`<link>` order is not fixed either. `apply_fb_persian_patch.py` reads
+both out of the document and copies the bundle's own prefix onto the patch's
+tags; keep it that way. The prefix is not cosmetic - the SPA server answers any
+extensionless path with this document, so a relative href on a deep path would
+resolve to `/<deep>/assets/...` and 404.
 
 `apply_fb_persian_patch.py --check` prints the detected app version and which
 bundle files it read.

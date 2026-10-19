@@ -36,11 +36,20 @@ ASSETS = [
     "fb-vazirmatn-700.woff2",
 ]
 
-# index.html references the built bundle as <link href="./assets/index-XXX.css">
-# and <script src="./assets/index-YYY.js">. Those names change on every release,
-# so they are read out of index.html rather than hard-coded here.
-LINK_RE = re.compile(rb'<link[^>]+href="(\./assets/[^"]+)"')
-SCRIPT_RE = re.compile(rb'<script[^>]+src="(\./assets/[^"]+)"')
+# index.html references the built bundle as
+#   <link rel="stylesheet" crossorigin href="/assets/index-XXX.css">
+#   <script type="module" crossorigin src="/assets/index-YYY.js"></script>
+# Older builds used a relative "./assets/..." href. Both the file names *and*
+# the path style change between releases, so neither is hard-coded here: the
+# names are read out of index.html and the prefix is copied from whatever the
+# bundle itself uses.
+#
+# The prefix is not cosmetic. The SPA server answers any extensionless path
+# with this document, so on a deep path a relative "./assets/..." resolves to
+# "/<deep>/assets/..." and 404s. The patch's own tags must therefore resolve
+# exactly the way the bundle's do.
+LINK_RE = re.compile(rb'<link[^>]+href="([^"]*assets/index-[^"]+\.css)"')
+SCRIPT_RE = re.compile(rb'<script[^>]+src="([^"]*assets/index-[^"]+\.js)"')
 
 CANDIDATES = [
     os.path.join(
@@ -105,6 +114,29 @@ def app_version(ui_dir: str) -> str:
                 if data.get(key):
                     return str(data[key])
     return "unknown"
+
+
+def asset_prefix(html: bytes) -> bytes:
+    """The path prefix the bundle itself uses (b'/assets/' or b'./assets/').
+
+    Copied onto the patch's own tags so they resolve the same way whatever path
+    the app is loaded from.
+    """
+    for rx in (LINK_RE, SCRIPT_RE):
+        m = rx.search(html)
+        if m:
+            href = m.group(1)
+            return href[: href.rindex(b"assets/")]
+    return b"/"
+
+
+def bundle_tags(html: bytes) -> list[bytes]:
+    """The two tags the patch adds, in the bundle's own path style."""
+    prefix = asset_prefix(html)
+    return [
+        b'<link rel="stylesheet" href="' + prefix + b'assets/fb-persian-rtl.css">',
+        b'<script defer src="' + prefix + b'assets/fb-persian-rtl.js"></script>',
+    ]
 
 
 def bundle_text(ui_dir: str) -> tuple[str, str, str]:
@@ -180,6 +212,9 @@ def check_state(ui_dir: str) -> int:
 
     with open(os.path.join(ui_dir, "index.html"), "rb") as fh:
         html = fh.read()
+    _, css_name, js_name = bundle_text(ui_dir)
+    print(f"bundle ref : css={css_name or '?'}  js={js_name or '?'}  "
+          f"prefix={asset_prefix(html).decode('ascii', 'replace')}")
     linked = [n for n in ASSETS if n.encode() in html]
     print(f"patched    : {len(linked)}/{len(ASSETS)} referenced from index.html")
 
@@ -207,10 +242,7 @@ def apply_patch(ui_dir: str, dry_run: bool = False, force: bool = False) -> int:
         html = fh.read()
     newline = b"\r\n" if b"\r\n" in html else b"\n"
 
-    tags = [
-        b'<link rel="stylesheet" href="./assets/fb-persian-rtl.css">',
-        b'<script defer src="./assets/fb-persian-rtl.js"></script>',
-    ]
+    tags = bundle_tags(html)
     already = [t for t in tags if t in html]
 
     if dry_run:
@@ -243,17 +275,24 @@ def apply_patch(ui_dir: str, dry_run: bool = False, force: bool = False) -> int:
         shutil.copy2(src, dst)
         print(f"installed  -> assets/{name}  ({os.path.getsize(dst)} bytes)")
 
-    # 3) reference them from index.html, right after the bundle's own stylesheet
-    html = open(index, "rb").read()
-    pos = html.find(b'href="./assets/index-')
-    if pos == -1:
+    # 3) reference them from index.html, after the bundle's own asset tags.
+    #
+    # The bundle's stylesheet <link> is the cascade anchor (the patch's CSS must
+    # come after it), but some releases emit the <script> last. Inserting after
+    # whichever of the two ends later keeps the patch's tags last in <head> in
+    # both layouts.
+    ends = [m.end() for m in (LINK_RE.search(html), SCRIPT_RE.search(html)) if m]
+    if ends:
+        end = html.find(b">", max(ends)) + 1
+    else:
+        end = html.find(b"</head>")
+    if end <= 0:
         print(
-            "ERROR: could not find the bundle stylesheet link in index.html - "
-            "the UI layout changed, see docs/UPDATE_CHECKLIST.md",
+            "ERROR: could not find the bundle's asset tags or </head> in "
+            "index.html - the UI layout changed, see docs/UPDATE_CHECKLIST.md",
             file=sys.stderr,
         )
         return 2
-    end = html.find(b">", pos) + 1
 
     missing = [t for t in tags if t not in html]
     if missing and (force or len(already) < len(tags)):

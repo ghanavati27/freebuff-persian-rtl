@@ -118,3 +118,24 @@ claim.
   new ones (`.freebucks-intro-price-heading`, `.profile-survey-*`,
   `.workspace-codebase-*`) are English app chrome - a rewards/survey permission
   flow and a project picker. None carry user or model text, so none were added.
+
+### 0.0.180
+- App updated; bundle renamed (`index-MhrKAKLz.js` / `index-3Ukgm2iF.css`).
+- **Installer fix.** `index.html` now references the bundle with an *absolute*
+  prefix (`/assets/...`) instead of the old relative `./assets/...`, and the
+  bundle `<script>` now precedes the `<link>`. The old `LINK_RE`/`SCRIPT_RE`
+  required `./assets/` and the injection anchor searched for
+  `href="./assets/index-`, so the run exited 2 after copying the assets but
+  before tagging `index.html` - i.e. a silently inactive patch.
+  Now: the regexes accept any prefix, `asset_prefix()` reads the bundle's own
+  prefix and `bundle_tags()` copies it onto the patch's tags, and the insertion
+  point is whichever of the bundle's `<script>`/`<link>` ends later (falling
+  back to `</head>`). The prefix is a correctness issue, not cosmetics: the SPA
+  server answers any extensionless path with this document, so a relative href
+  on a deep path would 404.
+- All 74 selectors still present - no selector change needed.
+- Injected tags now land as `/assets/fb-persian-rtl.{css,js}` on lines 217-218,
+  after the bundle's `<link>` on line 216, so the patch CSS still wins the
+  cascade.
+- Bundle scan: 102 uncovered classes carrying text directly. The one new class
+  (`.side-chat-note`, "Stopped.") is English app chrome; nothing was added.

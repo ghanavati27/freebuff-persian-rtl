@@ -67,3 +67,29 @@ The installer looks for `href="./assets/index-` to place its tags. If the new
 pointer to this file. Inspect the new `index.html`, move the anchor constant in
 the script, and re-run. Keep the injected tags immediately after the bundle's
 own stylesheet link so the patch stylesheet loads after the bundle's.
+
+## 0.0.180 - the asset path style is not fixed
+
+`index.html` used to reference the bundle relatively:
+
+```html
+<link rel="stylesheet" href="./assets/index-XXX.css">
+<script src="./assets/index-YYY.js"></script>
+```
+
+0.0.180 switched to absolute paths and put the `<script>` first:
+
+```html
+<script type="module" crossorigin src="/assets/index-MhrKAKLz.js"></script>
+<link rel="stylesheet" crossorigin href="/assets/index-3Ukgm2iF.css">
+```
+
+Do not assume either. When re-deriving, grep for `assets/index-` and copy
+whatever prefix the document actually uses onto the patch's own tags. The
+prefix is a correctness issue: the SPA server answers any extensionless path
+with this document, so a relative href on a deep path resolves to
+`/<deep>/assets/...` and 404s - which silently disables the whole patch.
+
+A hard failure (exit 2) after "installed -> assets/..." but with no
+"index.html -> added ..." line means the anchor was not found. That is this
+class of change; the assets are on disk but the patch is **not active**.
