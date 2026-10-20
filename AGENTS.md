@@ -36,7 +36,8 @@ These are not style preferences. Violating them breaks the app or its users.
    must see exactly the shipped UI. Every patch rule must be keyed on
    `:dir(rtl)` / `dir="auto"` so Latin content is provably untouched. The
    acceptance test is a **0-pixel regression diff** of a Latin-only page, not
-   a visual impression.
+   a visual impression. The chat-width section is the one deliberate exception -
+   see section 11.
 
 3. **Code stays left-to-right.** Code blocks, terminals, diffs, JSON, file
    paths and identifiers are code, not prose. They must never be mirrored,
@@ -253,7 +254,41 @@ These cost real debugging time. Read them before writing any selector.
 
 ---
 
-## 10. Tone and reporting
+## 11. Layout exceptions
+
+Constraint 2 says an LTR user must see the shipped UI. Section 5 of
+`patch/fb-persian-rtl.css` (chat width) is an **explicit, deliberate exception**
+to that: it changes the layout for every language, by request.
+
+Two rules apply to anything in this category:
+
+1. **It must be its own, clearly-marked section** of the CSS, stating in a
+   comment that it is not RTL-gated and why. Never bury a layout change inside
+   the direction work.
+2. **It must be documented here.** An undocumented layout change looks like a
+   bug to the next reader, and the 0-pixel test will "fail" for a reason nobody
+   can find.
+
+For the chat width specifically:
+
+- The shipped UI caps the transcript with one custom property,
+  `--chat-content-max-width: 720px`, defined in the app's own `:root` next to
+  `--explorer-width`. Every consumer wraps it in `min()`/`calc()` against `100%`
+  (the live centre column), so overriding the single property is enough - and it
+  is enough *responsively*, with no media query and no JS.
+- `.prose` carries its own `max-width: 860px; margin: 0 auto`, which would
+  re-centre the text inside a widened column and put the gap back, so the
+  transcript's copy is uncapped. The file-preview variant
+  (`.file-markdown-content > .prose`) is a different surface and is not touched.
+- Because the property name is a dependency the class check cannot see, it is
+  listed in `CHECKED_PROPS` in the installer and reported by `--check`.
+- `tools/verify_chat_width.py` is the acceptance test for this section. The
+  0-pixel LTR regression test still applies to sections 1-4; it cannot apply to
+  a layout change that is meant to be visible.
+
+---
+
+## 12. Tone and reporting
 
 - Be concise. Lead with the result, then the evidence.
 - Distinguish a measurement from an inference. If you cannot measure

@@ -4,9 +4,12 @@
    Local patch. NOT part of the shipped bundle. Re-applied after app updates.
 
    The direction work is done by the companion script (fb-persian-rtl.js), which
-   sets dir="auto" on the app's text-bearing elements. This file only adds the
-   Persian font and a few rules keyed on :dir(rtl), so an LTR user's rendering
-   stays the shipped one.
+   sets dir="auto" on the app's text-bearing elements. Sections 1-4 add the
+   Persian font and rules keyed on :dir(rtl), so an LTR user's rendering stays
+   the shipped one.
+
+   Section 5 is deliberately different: it is a LAYOUT exception that applies to
+   every language, by request. See "Layout exceptions" in AGENTS.md.
    ========================================================================== */
 
 /* ---------------------------------------------------------------------------
@@ -116,4 +119,54 @@ samp:dir(rtl),
 .md-pre:dir(rtl) {
   direction: ltr;
   unicode-bidi: isolate;
+}
+
+/* ---------------------------------------------------------------------------
+   5) Chat width.  *** LAYOUT - NOT RTL-gated. Read this before editing. ***
+
+   This is a deliberate exception to the "an LTR user sees exactly the shipped
+   UI" guarantee: it changes the layout for every language, by request. It is
+   the only section in this file that is not keyed on :dir(rtl).
+
+   The shipped UI caps the transcript column with one custom property, defined
+   in the app's own :root next to --explorer-width:
+
+       --chat-content-max-width: 720px
+
+   Every consumer wraps it in min()/calc() against 100% - the width of the
+   centre column, i.e. the window minus whichever side panels are open:
+
+     .messages            --chat-gutter: max(--space-8,
+                                           calc((100% - <var>) / 2))
+                          -> the empty band on both sides
+     .composer            width: min(100%, calc(<var> + 2 * --space-7))
+     .ad-banner, .todo-dock, .edit-banner, .question-dock,
+     .composer-status     width: min(calc(100% - 2 * --space-7), <var>)
+
+   So overriding the one property is enough, and it is enough *responsively*:
+   because each consumer re-evaluates 100% against the live centre column, the
+   transcript follows both window resizes and panel open/close with no media
+   query and no JS. The app's own JS also reads this property back through
+   getComputedStyle (--dk-chat-content-max-width || --chat-content-max-width,
+   defaulting to 720), so it sees the new value too.
+
+   .prose carries its own `max-width: 860px; margin: 0 auto`. Left alone, that
+   would re-centre the text *inside* the widened column and put the gap back -
+   just moved inward - so the transcript's copy is uncapped to match. The
+   file-preview variant (.file-markdown-content > .prose) is a different
+   surface and is deliberately not touched.
+   --------------------------------------------------------------------------- */
+:root {
+  --chat-content-max-width: min(100%, 1200px);
+}
+
+.messages .prose {
+  max-width: none;
+}
+
+/* The loading skeleton mirrors the transcript column, so it follows the same
+   cap - otherwise the column visibly jumps in width when the transcript
+   arrives. */
+.fb-skeleton-conversation {
+  max-width: min(100%, 1200px);
 }

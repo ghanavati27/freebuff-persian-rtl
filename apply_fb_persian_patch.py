@@ -165,6 +165,9 @@ def bundle_text(ui_dir: str) -> tuple[str, str, str]:
 # classes, so they must not take part in the class check.
 SKIP = {"pre", "code", "kbd", "samp"}
 
+# Custom properties this patch overrides, checked by name. See missing_props().
+CHECKED_PROPS = ["--chat-content-max-width"]
+
 
 def extract_selectors() -> list[str]:
     """Every class the patch relies on, read out of the patch itself.
@@ -178,6 +181,12 @@ def extract_selectors() -> list[str]:
         if not os.path.isfile(p):
             continue
         text = open(p, encoding="utf-8").read()
+        # Strip comments first: a class named only in prose (e.g. a comment
+        # explaining why .file-markdown-content is left alone) is not a
+        # dependency, and counting it would fail the check on a class the patch
+        # never actually targets.
+        if name.endswith(".css"):
+            text = re.sub(r"/\*.*?\*/", " ", text, flags=re.S)
         # Quoted class lists, e.g. '.prose p' in the JS.
         for quote in ("'", '"'):
             found += re.findall(re.escape(quote) + r"\." + r"([A-Za-z][\w-]*)", text)
@@ -204,11 +213,27 @@ def health_check(ui_dir: str) -> tuple[int, int, list[str]]:
     return len(selectors) - len(missing), len(selectors), missing
 
 
+def missing_props(ui_dir: str) -> list[str]:
+    """Custom properties the patch overrides that have vanished from the bundle.
+
+    A class check cannot see these: if a release renames one, the patch still
+    installs and every selector still matches, but the override silently stops
+    applying - the failure mode the selector check exists to prevent, one level
+    down. The chat-width section depends on --chat-content-max-width existing in
+    the app's own :root, so it is checked by name.
+    """
+    text, _, _ = bundle_text(ui_dir)
+    return [p for p in CHECKED_PROPS if p not in text]
+
+
 def check_state(ui_dir: str) -> int:
     print(f"ui dir     : {ui_dir}")
     print(f"app version: {app_version(ui_dir)}")
     ok, total, missing = health_check(ui_dir)
     print(f"selectors  : {ok}/{total} still present in the bundle")
+    gone_props = missing_props(ui_dir)
+    print(f"props      : {len(CHECKED_PROPS) - len(gone_props)}/{len(CHECKED_PROPS)}"
+          f" overridden custom properties still defined in the bundle")
 
     with open(os.path.join(ui_dir, "index.html"), "rb") as fh:
         html = fh.read()
@@ -222,12 +247,17 @@ def check_state(ui_dir: str) -> int:
         p = os.path.join(ui_dir, "assets", name)
         print(f"  asset {name:<24} {'present' if os.path.isfile(p) else 'MISSING'}")
 
-    if missing:
-        print("\nWARNING: these patch selectors no longer appear in the bundle:")
-        for s in missing:
-            print(f"    {s}")
+    if missing or gone_props:
+        if missing:
+            print("\nWARNING: these patch selectors no longer appear in the bundle:")
+            for s in missing:
+                print(f"    {s}")
+        if gone_props:
+            print("\nWARNING: these overridden custom properties are gone from the bundle:")
+            for p in gone_props:
+                print(f"    {p}")
         print("The patch will still install, but something above needs updating.")
-    return 1 if missing else 0
+    return 1 if (missing or gone_props) else 0
 
 
 def apply_patch(ui_dir: str, dry_run: bool = False, force: bool = False) -> int:
@@ -306,11 +336,20 @@ def apply_patch(ui_dir: str, dry_run: bool = False, force: bool = False) -> int:
 
     ok, total, gone = health_check(ui_dir)
     print(f"\nselectors  : {ok}/{total} present in the bundle")
+    gone_props = missing_props(ui_dir)
+    print(f"props      : {len(CHECKED_PROPS) - len(gone_props)}/{len(CHECKED_PROPS)}"
+          f" overridden custom properties still defined in the bundle")
     if gone:
         print("WARNING: these patch selectors no longer appear in the bundle:")
         for s in gone:
             print(f"    {s}")
         print("Update docs/SELECTORS.md with replacements before relying on it.")
+        return 1
+    if gone_props:
+        print("WARNING: these overridden custom properties are gone from the bundle:")
+        for p in gone_props:
+            print(f"    {p}")
+        print("The chat-width section will silently stop applying until fixed.")
         return 1
     print("OK: patch applied and every selector verified.")
     return 0

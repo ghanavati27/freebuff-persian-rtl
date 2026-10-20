@@ -41,6 +41,36 @@ Build the harness page from the real markup: copy the app's own CSS
 hand-write markup that only resembles the app - the point is to exercise the
 real rules.
 
+## verify_chat_width.py
+
+The acceptance test for the chat-width section. Requires Selenium + Pillow and a
+Chromium.
+
+```bat
+python tools\verify_chat_width.py
+python tools\verify_chat_width.py --keep      REM keep the rendered PNGs
+```
+
+It renders the app's real bundle CSS with a faithful shell (the app's own
+`.threadview` / `.messages` / `.msg.assistant` / `.prose` markup, and its own
+216px `.project-sidebar` and 440px explorer either side) at 4 window widths x 4
+panel states, once unpatched and once patched, and checks:
+
+| Check | Pass condition |
+|---|---|
+| Stock baseline | transcript is the shipped cap (720px) wherever the centre column can reach it |
+| Inner re-cap | patched `.prose` computed `max-width` is `none` |
+| No remaining gap | patched prose width == `.messages` content width |
+| Cap respected | patched prose width <= min(centre - 64, 1200) |
+| Responsive | widening occurs in every case the centre column exceeds 720px |
+| Gutter floor | `.messages` left padding never drops below `--space-8` (32px) |
+| Pixel cross-check | Pillow ink span of the transcript band grows between stock and patched |
+
+**Use Selenium, not `chrome.exe --headless --screenshot`.** On Windows a raw
+chrome.exe invocation delegates to an already-running browser and silently
+produces nothing - the screenshot flag returns exit 0 and writes no file. This
+cost real time; do not re-derive it.
+
 ## Acceptance criteria
 
 | Check | Pass condition |

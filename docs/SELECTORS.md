@@ -51,7 +51,7 @@ from the patch files themselves and confirms it still appears in the shipped
 bundle:
 
 ```
-selectors  : 74/74 still present in the bundle  (after 0.0.174 additions)
+selectors  : 76/76 still present in the bundle  (74 direction classes + 2 added by the chat-width section)
 ```
 
 A count below `N/N` means a release renamed or removed a class. Re-derive it per
@@ -76,3 +76,19 @@ covered, all were English app chrome; only two surfaces were worth adding:
 
 Both are `:dir(rtl)`-gated in effect (they only match once `dir="auto"` resolves
 to RTL), so an English-speaking user is unaffected.
+
+## Chat-width section (added while on 0.0.182)
+
+Unlike everything above, these are **not** keyed on `:dir(rtl)` - the section is
+a deliberate layout exception (AGENTS.md section 11).
+
+| Name | Kind | Why |
+|---|---|---|
+| `--chat-content-max-width` | custom property | The cap the section overrides. The class check cannot see a property, so it is listed in `CHECKED_PROPS` and reported separately by `--check`. |
+| `.messages` | class | Carries `--chat-gutter`, the centring padding that made the empty band. |
+| `.messages .prose` | class | Uncapped so the text fills the widened column. Scoped to the transcript on purpose: the file-preview `.prose` is a different surface. |
+| `.fb-skeleton-conversation` | class | The loading skeleton mirrors the column, so it follows the same cap instead of jumping in width when the transcript arrives. |
+
+`extract_selectors()` strips CSS comments before scanning. Without that, a class
+named only in an explanatory comment would be counted as a dependency and fail
+the health check on a class the patch never actually targets.

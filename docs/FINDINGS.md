@@ -149,3 +149,41 @@ claim.
   written. Health check 74/74, exit 0.
 - Bundle scan: 102 uncovered classes carrying text directly - **0 added, 0
   removed** versus 0.0.180. The surface is stable between these two releases.
+
+## Chat width (layout section 5) - added while on 0.0.182
+
+The shipped UI caps the transcript with one custom property,
+`--chat-content-max-width: 720px`, defined in the app's own `:root` next to
+`--explorer-width: 440px`. Every consumer wraps it in `min()`/`calc()` against
+`100%` - the live centre column, i.e. the window minus whichever panels are open
+- so the empty band either side was one property's doing, and one override
+reclaims it, responsively, with no media query and no JS.
+
+Verified with `tools/verify_chat_width.py` (Selenium + Pillow), 4 window widths x
+4 panel states, stock vs patched. DOM geometry at device scale 1:
+
+| panels | viewport | centre | stock | patched | gutter |
+|---|---|---|---|---|---|
+| both-open | 1264 | 608 | 544 | 544 | 32 |
+| both-open | 1584 | 928 | 720 | 864 | 32 |
+| both-open | 1904 | 1248 | 720 | 1184 | 32 |
+| both-open | 2544 | 1888 | 720 | 1200 | 344 |
+| right-closed | 1584 | 1368 | 720 | 1200 | 84 |
+| left-closed | 1904 | 1464 | 720 | 1200 | 132 |
+| both-closed | 1264 | 1264 | 720 | 1200 | 32 |
+| both-closed | 2544 | 2544 | 720 | 1200 | 672 |
+
+In all 16 combinations the patched transcript equals the `.messages` content box
+(no inner gap left) and `--chat-content-max-width` resolves to
+`min(100%, 1200px)`. Pixel cross-check over the transcript band, both panels
+open: ink span **704px (stock) -> 1177px (patched)** at both 1920 and 2560.
+
+Where the centre column is narrower than 720px (both-open @1264 -> 608px) there
+is nothing to reclaim, so patched equals stock. That is expected, not a failure -
+and it is why the harness asserts widening only where the column exceeds the
+shipped cap.
+
+**Trap.** `.prose{max-width:860px;margin:0 auto}` re-caps the text *inside* the
+column. Widening the column alone moves the gap inward instead of removing it,
+so the transcript's `.prose` is uncapped as well. The file-preview variant
+(`.file-markdown-content > .prose`) is a different surface and is not touched.
