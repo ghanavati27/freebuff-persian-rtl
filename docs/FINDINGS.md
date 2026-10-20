@@ -139,3 +139,13 @@ claim.
   cascade.
 - Bundle scan: 102 uncovered classes carrying text directly. The one new class
   (`.side-chat-note`, "Stopped.") is English app chrome; nothing was added.
+
+### 0.0.182
+- App updated; JS bundle renamed to `index-8p4WIDGg.js` (CSS unchanged at
+  `index-3Ukgm2iF.css`).
+- All 74 selectors still present - **no patch change needed**. Patch re-applied
+  with the fixed installer: `/assets/` prefix picked up automatically, tags
+  injected on lines 217-218 after the bundle's `<link>` on 216, fresh backup
+  written. Health check 74/74, exit 0.
+- Bundle scan: 102 uncovered classes carrying text directly - **0 added, 0
+  removed** versus 0.0.180. The surface is stable between these two releases.
