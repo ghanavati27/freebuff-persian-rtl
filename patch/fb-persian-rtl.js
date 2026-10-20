@@ -17,6 +17,10 @@
    The companion stylesheet only adds the Persian font (scoped to Arabic-script
    code points) plus a couple of rules keyed on :dir(rtl), so nothing it does
    can reach an LTR element.
+
+   This file has a second, unrelated job: auto-continuing the sponsored break
+   (see the block at the end of the IIFE). That one is not RTL-gated either, and
+   is documented as an exception in AGENTS.md section 11.
    ========================================================================== */
 (function () {
   'use strict';
@@ -105,9 +109,70 @@
         var added = records[r].addedNodes;
         for (var n = 0; n < added.length; n++) apply(added[n]);
       }
+      watchSponsoredBreak();
     }).observe(document.documentElement, { childList: true, subtree: true });
 
     apply(document.documentElement);
+    watchSponsoredBreak();
+  }
+
+  /* ---------------------------------------------------------------------------
+     Sponsored break: auto-continue.  (NOT RTL-gated - see AGENTS.md 11.2.)
+
+     `.sponsor-intermission` is a BLOCKING modal (role="dialog"
+     aria-modal="true", aria-label="Sponsored break") and both of its exits are
+     unavailable while its countdown runs: "Continue working"
+     (.intermission-continue) is `disabled`, and "Close sponsor break"
+     (.spotlight-close) is not rendered at all. So it cannot be hidden - the app
+     would sit waiting on a click that can never happen. It is deliberately NOT
+     in the stylesheet's hide list for exactly that reason.
+
+     Instead, click "Continue working" the moment it becomes enabled. That is the
+     same thing the user does (the same `nk("continue")` event), it leaves the
+     break visible for its countdown instead of blanking the area, and it cannot
+     strand the app.
+
+     This is NOT an ad impression: the impression/click pixel lives in the ad's
+     own click handler, not on render, so dismissing the break this way fires
+     nothing extra.
+
+     The countdown's length is not knowable from the bundle, so poll rather than
+     guess a timeout - and only while a break is actually on screen, so the
+     steady-state cost is zero.
+     --------------------------------------------------------------------------- */
+  var BREAK_POLL_MS = 500;
+  var breakTimer = null;
+  var continued = new WeakSet();
+
+  function tickSponsoredBreak() {
+    var dlg = document.querySelector('.sponsor-intermission');
+    if (!dlg) {
+      clearInterval(breakTimer);
+      breakTimer = null;
+      return;
+    }
+    if (continued.has(dlg)) return;               /* already clicked this one */
+    var btn = dlg.querySelector('.intermission-continue');
+    if (!btn) return;
+    if (btn.disabled || btn.getAttribute('aria-disabled') === 'true') return;
+    continued.add(dlg);
+    try {
+      btn.click();
+    } catch (err) {
+      /* A click must never be able to break the app. */
+    }
+  }
+
+  function watchSponsoredBreak() {
+    if (!document.querySelector('.sponsor-intermission')) {
+      if (breakTimer !== null) {
+        clearInterval(breakTimer);
+        breakTimer = null;
+      }
+      return;
+    }
+    if (breakTimer !== null) return;
+    breakTimer = setInterval(tickSponsoredBreak, BREAK_POLL_MS);
   }
 
   if (document.readyState === 'loading') {

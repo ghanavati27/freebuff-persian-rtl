@@ -106,3 +106,26 @@ Over-reach is the failure mode a hide rule is most likely to have, so it is
 asserted rather than assumed. When adding a surface to the hide list, first check
 whether it has a `role="dialog"` / `aria-modal` and whether it owns a dismiss
 control; if it has no exit of its own, do not hide it.
+
+## verify_break_autocontinue.py
+
+The acceptance test for the sponsored-break auto-continue in the runtime half.
+Requires Selenium + a Chromium.
+
+```bat
+python toolserify_break_autocontinue.py
+```
+
+Renders the real break markup with the real patch script loaded, attaches a click
+counter, and drives the button's disabled state from the test while reading the
+counter back out of the page:
+
+| Phase | Pass condition |
+|---|---|
+| button still disabled | 0 clicks (a poll that ignores `disabled` is the bug worth catching) |
+| button enabled | exactly 1 click |
+| further polling | still exactly 1 - no repeat clicking while React unmounts |
+| a fresh break appears | picked up and clicked, proving the watcher restarted |
+
+Note the harness template is substituted with `str.replace`, not `str.format`:
+the inline script is full of braces and `.format` treats them as fields.

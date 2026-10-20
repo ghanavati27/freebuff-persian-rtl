@@ -331,6 +331,28 @@ would be fabricating ad impressions, which this repo does not do.
 can out-specify would fail silently, which is the failure mode this patch exists
 to avoid.
 
+#### The sponsored break is auto-continued, not hidden (option B)
+
+Since `.sponsor-intermission` cannot be hidden without stranding the app, the
+runtime half (`patch/fb-persian-rtl.js`) dismisses it instead: it clicks
+"Continue working" the moment that button becomes enabled.
+
+- The same event the user produces (`nk("continue")`), so nothing extra is
+  reported. **The impression/click pixel lives in the ad's own click handler, not
+  on render** - so dismissing the break this way fires no ad event at all. Hiding
+  it would have been no better; auto-continuing it is simply honest.
+- The break stays visible for its countdown rather than blanking the area, which
+  is why hiding it is not an option worth taking.
+- The countdown's length is **not knowable from the bundle**, so the watcher
+  polls instead of guessing a timeout - and only while a break is on screen, so
+  the steady-state cost is zero. Do not "optimise" this into a fixed timeout.
+- The poll ignores the button while `disabled` / `aria-disabled="true"`, and a
+  `WeakSet` keeps it to one click per dialog.
+
+`tools/verify_break_autocontinue.py` is the acceptance test: nothing is clicked
+while disabled, exactly one click once enabled, no repeat clicks afterwards, and
+a later break is picked up too.
+
 ---
 
 ## 12. Tone and reporting

@@ -108,3 +108,13 @@ Also not keyed on `:dir(rtl)` - another deliberate exception (AGENTS.md 11.2).
 `!important` is used in this section on purpose: a hide rule that a future bundle
 rule can out-specify would fail silently, which is the failure mode this patch
 exists to avoid.
+
+### Selectors the runtime half uses for the sponsored break
+
+| Name | Used for |
+|---|---|
+| `.sponsor-intermission` | Presence test for the blocking modal. |
+| `.intermission-continue` | The "Continue working" button the watcher clicks once it is enabled. |
+
+Both are picked up by the installer's health check automatically, since it reads
+the class names out of the patch files themselves.

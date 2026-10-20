@@ -230,3 +230,45 @@ measures `getBoundingClientRect()` to report ad viewability. A hidden element
 measures 0x0, so it is reported as **never in the viewport**. That is the
 truthful consequence of hiding it. No non-zero box is faked to manufacture a
 "viewed" signal - that would be fabricating ad impressions.
+
+### Sponsored break: auto-continued, not hidden
+
+Hiding `.sponsor-intermission` is not an option - it is a blocking modal and the
+user would have no way out. It is instead auto-continued from the runtime half of
+the patch: click `.intermission-continue` as soon as it stops being disabled.
+
+Two bundle details decided this:
+
+1. **The impression pixel fires on click, not on render.** The ad's own click
+   handler is
+
+   ```js
+   const O = useCallback(() => {
+     mL(l6, {dwellMs, timerMs: n, timerCompleted: tk(a, n, qa()), clientEventId: ...});
+     t.impUrl && Px(t.impUrl, void 0, {provider, surface, placementId});
+     nk("click");
+   }, [t.impUrl, e, a, n]);
+   ```
+
+   so dismissing the break by clicking Continue fires no ad event - and, by the
+   same token, hiding the break would not have produced a false impression either.
+   The only thing hiding it would produce is a stuck app.
+
+2. **The countdown length is not recoverable from the bundle.** The component
+   takes `done` / `progress`, the Continue button is `disabled` while the
+   countdown runs and `.spotlight-close` is not rendered at all during it - but
+   the timer's duration lives outside what could be traced with confidence. The
+   watcher therefore polls (500ms) instead of using a fixed timeout, and only
+   while a break is on screen.
+
+Verified by `tools/verify_break_autocontinue.py`:
+
+| Phase | Expected | Measured |
+|---|---|---|
+| button disabled | 0 clicks | 0 |
+| button enabled | exactly 1 click | 1 |
+| further polling | still 1 | 1 |
+| a fresh break | picked up and clicked | 2 total |
+
+The JS half now carries this second, non-RTL job; the stylesheet deliberately
+does not hide the modal, and `tools/verify_ads_hidden.py` asserts that.
