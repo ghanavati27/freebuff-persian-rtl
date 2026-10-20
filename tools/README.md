@@ -83,3 +83,26 @@ cost real time; do not re-derive it.
 
 If a check contradicts a prior belief, record the contradiction and keep the
 measurement.
+
+## verify_ads_hidden.py
+
+The acceptance test for the ad-hiding section. Requires Selenium + a Chromium.
+
+```bat
+python toolserify_ads_hidden.py
+```
+
+Renders the real ad markup (traced out of the bundle's own JSX) against the real
+bundle CSS, once unpatched and once patched, and reads
+`getComputedStyle(...).display` plus `getBoundingClientRect()` back out of the
+DOM. It checks two things, and the second matters as much as the first:
+
+| Check | Pass condition |
+|---|---|
+| Targeted surfaces | each computes `display: none` with a 0x0 box, where stock had a real box |
+| Scope guard | `.sponsor-intermission` is **still visible** - it is a blocking modal, and hiding it would trap the user |
+
+Over-reach is the failure mode a hide rule is most likely to have, so it is
+asserted rather than assumed. When adding a surface to the hide list, first check
+whether it has a `role="dialog"` / `aria-modal` and whether it owns a dismiss
+control; if it has no exit of its own, do not hide it.

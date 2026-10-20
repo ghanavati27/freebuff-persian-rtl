@@ -187,3 +187,46 @@ shipped cap.
 column. Widening the column alone moves the gap inward instead of removing it,
 so the transcript's `.prose` is uncapped as well. The file-preview variant
 (`.file-markdown-content > .prose`) is a different surface and is not touched.
+
+## Ad surfaces hidden (section 6) - added while on 0.0.182
+
+The banner above the composer is `.sponsored-ad.ad-banner`, rendered by the app's
+own React code. The class is built at runtime - `className: \`sponsored-ad
+ad-${t}\`` with `t="banner"` - so grepping the bundle for the literal
+`"ad-banner"` finds only the app's own telemetry selector, never a `className`.
+That initially looked like server-side injection; it is not.
+
+The banner has no dismiss control of its own, which is why it is always present.
+
+### The hazard: .sponsor-intermission is a blocking modal
+
+Before hiding any surface, check whether it can trap the user. This one can:
+
+- `role="dialog" aria-modal="true" aria-label="Sponsored break"`
+- its only exits are its own buttons - `intermission-continue` ("Continue
+  working") and `spotlight-close` ("Close sponsor break")
+- the close button is suppressed while the break is busy (`n ? null : ...`)
+- `aqe = 30 * 6e4` - a 30-minute constant near that component
+
+Hiding it would leave the app waiting on a click that can never happen. It is
+**not** hidden, and `tools/verify_ads_hidden.py` asserts it stays visible.
+
+### What is hidden, and why each is safe
+
+| Selector | Stock render | Patched | Safety |
+|---|---|---|---|
+| `.sponsored-ad.ad-banner` | `flex 720x60` | `none 0x0` | no modal role, no dismiss |
+| `.ad-showcase` | `block 720x170` | `none 0x0` | no modal role |
+| `.sponsored-proposal` | `flex 720x48` | `none 0x0` | `<section aria-label="Sponsored proposal">`, has Minimize/Dismiss |
+| `.placement-sidebar-card` | `block 320x240` | `none 0x0` | has its own dismiss |
+
+Scope guard, same run: `.sponsor-intermission` measured `flex 1x849` both before
+and after - untouched.
+
+### Telemetry consequence, stated plainly
+
+The app's own telemetry reads `.sponsored-ad.ad-banner, .ad-showcase` and
+measures `getBoundingClientRect()` to report ad viewability. A hidden element
+measures 0x0, so it is reported as **never in the viewport**. That is the
+truthful consequence of hiding it. No non-zero box is faked to manufacture a
+"viewed" signal - that would be fabricating ad impressions.

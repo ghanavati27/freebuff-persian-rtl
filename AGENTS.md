@@ -36,8 +36,8 @@ These are not style preferences. Violating them breaks the app or its users.
    must see exactly the shipped UI. Every patch rule must be keyed on
    `:dir(rtl)` / `dir="auto"` so Latin content is provably untouched. The
    acceptance test is a **0-pixel regression diff** of a Latin-only page, not
-   a visual impression. The chat-width section is the one deliberate exception -
-   see section 11.
+   a visual impression. Sections 5 and 6 are the deliberate exceptions - see
+   section 11.
 
 3. **Code stays left-to-right.** Code blocks, terminals, diffs, JSON, file
    paths and identifiers are code, not prose. They must never be mirrored,
@@ -254,20 +254,27 @@ These cost real debugging time. Read them before writing any selector.
 
 ---
 
-## 11. Layout exceptions
+## 11. Appearance and layout exceptions
 
-Constraint 2 says an LTR user must see the shipped UI. Section 5 of
-`patch/fb-persian-rtl.css` (chat width) is an **explicit, deliberate exception**
-to that: it changes the layout for every language, by request.
+Constraint 2 says an LTR user must see the shipped UI. Two sections of
+`patch/fb-persian-rtl.css` are **explicit, deliberate exceptions** to that,
+because they change the UI for every language, by request:
+
+| Section | What it does |
+|---|---|
+| 5 - chat width | Widens the transcript column and lets it track the window and the side panels. |
+| 6 - ad surfaces | Hides the app's ad slots. |
 
 Two rules apply to anything in this category:
 
 1. **It must be its own, clearly-marked section** of the CSS, stating in a
-   comment that it is not RTL-gated and why. Never bury a layout change inside
+   comment that it is not RTL-gated and why. Never bury such a change inside
    the direction work.
-2. **It must be documented here.** An undocumented layout change looks like a
-   bug to the next reader, and the 0-pixel test will "fail" for a reason nobody
-   can find.
+2. **It must be documented here.** An undocumented change of this kind looks
+   like a bug to the next reader, and the 0-pixel test will "fail" for a reason
+   nobody can find.
+
+### 11.1 Chat width (section 5)
 
 For the chat width specifically:
 
@@ -284,7 +291,45 @@ For the chat width specifically:
   listed in `CHECKED_PROPS` in the installer and reported by `--check`.
 - `tools/verify_chat_width.py` is the acceptance test for this section. The
   0-pixel LTR regression test still applies to sections 1-4; it cannot apply to
-  a layout change that is meant to be visible.
+  a change that is meant to be visible.
+
+### 11.2 Ad surfaces (section 6)
+
+**Before hiding any surface, check whether it can trap the user.** That is the
+whole risk in this section, and it is not obvious from the class name.
+
+`.sponsor-intermission` is a **blocking modal** (`role="dialog"
+aria-modal="true"`, `aria-label="Sponsored break"`) whose only exits are its own
+"Continue working" and "Close sponsor break" buttons - and the close button is
+itself suppressed while the break is busy. Hiding it would leave the app waiting
+on a click that can never happen. It is therefore **not** hidden, and
+`tools/verify_ads_hidden.py` asserts that it stays visible, because over-reach is
+the failure mode a hide rule is most likely to have.
+
+The four surfaces that ARE hidden were each traced to their component and each
+checked for a modal role and for their own dismiss control:
+
+| Selector | Rendered by | Why it is safe |
+|---|---|---|
+| `.sponsored-ad.ad-banner` | `className: \`sponsored-ad ad-${t}\`` | No modal role, no dismiss of its own. |
+| `.ad-showcase` | the large sponsor card | No modal role. |
+| `.sponsored-proposal` | `<section aria-label="Sponsored proposal">` | Has its own Minimize/Dismiss; not a modal. |
+| `.placement-sidebar-card` | the sidebar placement | Has its own dismiss. |
+
+Class names here are built at runtime, which is why grepping the bundle for the
+literal `"ad-banner"` finds only the app's telemetry selector, never a
+`className`. A CSS hide is unaffected by that and survives every re-render.
+
+**State the telemetry consequence rather than hiding it.** The app's own
+telemetry queries `.sponsored-ad.ad-banner, .ad-showcase` and measures
+`getBoundingClientRect()` to report ad viewability. A hidden element measures
+0x0 and is reported as never in the viewport. That is the truthful result of
+hiding it. **Never** fake a non-zero box to manufacture a "viewed" signal - that
+would be fabricating ad impressions, which this repo does not do.
+
+`!important` is used in this section on purpose: a hide rule a future bundle rule
+can out-specify would fail silently, which is the failure mode this patch exists
+to avoid.
 
 ---
 

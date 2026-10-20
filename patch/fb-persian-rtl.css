@@ -9,7 +9,9 @@
    the shipped one.
 
    Section 5 is deliberately different: it is a LAYOUT exception that applies to
-   every language, by request. See "Layout exceptions" in AGENTS.md.
+   every language, by request. Section 6 hides the app's ad surfaces, which is
+   another deliberate exception of the same kind. See "Appearance and layout
+   exceptions" in AGENTS.md.
    ========================================================================== */
 
 /* ---------------------------------------------------------------------------
@@ -169,4 +171,50 @@ samp:dir(rtl),
    arrives. */
 .fb-skeleton-conversation {
   max-width: min(100%, 1200px);
+}
+
+/* ---------------------------------------------------------------------------
+   6) Ad surfaces hidden.  *** APPEARANCE - NOT RTL-gated. ***
+
+   Another deliberate exception to the "an LTR user sees the shipped UI"
+   guarantee: it removes the app's ad slots for every language, by request. See
+   "Appearance and layout exceptions" in AGENTS.md.
+
+   These are React-rendered nodes whose class list is built at runtime
+   (className: `sponsored-ad ad-${variant}`), so a plain CSS hide survives every
+   re-render - no observer, no timing, nothing to keep in sync. That is also why
+   grepping the bundle for the literal string "ad-banner" finds only the app's
+   own telemetry selector: the class never appears as a literal.
+
+   Each selector below was traced to the component that renders it, and each one
+   checked for whether hiding it can trap the user:
+     .sponsored-ad.ad-banner   the banner above the composer. No dismiss control
+                               of its own, no modal role. Safe.
+     .ad-showcase              the large sponsor card. Safe.
+     .sponsored-proposal       <section aria-label="Sponsored proposal">, with
+                               its own Minimize/Dismiss. NOT a modal. Safe.
+     .placement-sidebar-card   the sidebar placement, with its own dismiss. Safe.
+
+   DELIBERATELY NOT HIDDEN: .sponsor-intermission. It is a BLOCKING modal
+   (role="dialog" aria-modal="true", aria-label="Sponsored break") whose only
+   exits are its "Continue working" and "Close sponsor break" buttons, and the
+   close button is itself suppressed while the break is busy. Hiding it would
+   leave the app waiting on a click that can never happen. Do not add it here
+   without giving it an exit path first - see docs/FINDINGS.md.
+
+   Side effect, stated plainly rather than hidden: the app's own telemetry reads
+   ".sponsored-ad.ad-banner, .ad-showcase" and measures getBoundingClientRect()
+   on it to report ad viewability. A hidden element measures 0x0, so it is
+   reported as never in the viewport. That is the truthful consequence of hiding
+   it. This patch does not fake a non-zero box to manufacture a "viewed" signal.
+
+   `!important` is used here on purpose: a hide rule that a future bundle rule
+   can out-specify would fail silently, which is the exact failure mode this
+   whole patch exists to avoid.
+   --------------------------------------------------------------------------- */
+.sponsored-ad.ad-banner,
+.ad-showcase,
+.sponsored-proposal,
+.placement-sidebar-card {
+  display: none !important;
 }

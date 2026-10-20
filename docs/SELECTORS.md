@@ -92,3 +92,19 @@ a deliberate layout exception (AGENTS.md section 11).
 `extract_selectors()` strips CSS comments before scanning. Without that, a class
 named only in an explanatory comment would be counted as a dependency and fail
 the health check on a class the patch never actually targets.
+
+## Ad-hiding section (added while on 0.0.182)
+
+Also not keyed on `:dir(rtl)` - another deliberate exception (AGENTS.md 11.2).
+
+| Name | Kind | Why |
+|---|---|---|
+| `.sponsored-ad.ad-banner` | class (runtime-built) | The banner above the composer. Built as `sponsored-ad ad-${variant}`, so it never appears as a literal `className` in the bundle. |
+| `.ad-showcase` | class | The large sponsor card. |
+| `.sponsored-proposal` | class | Root of the sponsored-proposal panel; `<section aria-label="Sponsored proposal">`. |
+| `.placement-sidebar-card` | class | The sidebar placement. |
+| `.sponsor-intermission` | class | **Deliberately NOT hidden** - it is a blocking `role="dialog" aria-modal="true"` whose only exits are its own buttons. Kept in `verify_ads_hidden.py` as a scope guard. |
+
+`!important` is used in this section on purpose: a hide rule that a future bundle
+rule can out-specify would fail silently, which is the failure mode this patch
+exists to avoid.
