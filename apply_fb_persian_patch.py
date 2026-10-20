@@ -187,12 +187,25 @@ def extract_selectors() -> list[str]:
         # never actually targets.
         if name.endswith(".css"):
             text = re.sub(r"/\*.*?\*/", " ", text, flags=re.S)
-        # Quoted class lists, e.g. '.prose p' in the JS.
+        # Quoted class lists, e.g. '.prose p' in the JS. Every class in a
+        # compound selector is taken, not just the first.
         for quote in ("'", '"'):
-            found += re.findall(re.escape(quote) + r"\." + r"([A-Za-z][\w-]*)", text)
-        # Bare CSS selectors. A dot inside url("./...woff2") is skipped because
-        # such a name is immediately followed by a closing quote.
-        found += re.findall(r"(?:\{|,|\}|\s)\.([A-Za-z][\w-]*)(?![\"'])", text)
+            for chain in re.findall(
+                    re.escape(quote) + r"\.([A-Za-z][\w-]*(?:\.[A-Za-z][\w-]*)*)",
+                    text):
+                found += chain.split(".")
+        # Bare CSS selectors, likewise including every class of a compound
+        # selector. Taking only the first would mean `.sponsored-ad.ad-banner`
+        # checked `sponsored-ad` alone, so a release that renamed the variant
+        # (the part that decides WHICH ad surface the rule hides) would leave
+        # the rule silently dead while the check stayed green.
+        #
+        # The leading delimiter is required so a dot inside url("./x.woff2")
+        # cannot be read as a class - there the dot follows a slash.
+        for chain in re.findall(
+                r"(?:\{|,|\}|\s|>|\+|~)\.([A-Za-z][\w-]*(?:\.[A-Za-z][\w-]*)*)"
+                r"(?![\"'])", text):
+            found += chain.split(".")
     return [s for s in dict.fromkeys(found) if s not in SKIP]
 
 

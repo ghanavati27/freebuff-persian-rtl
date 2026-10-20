@@ -118,3 +118,19 @@ exists to avoid.
 
 Both are picked up by the installer's health check automatically, since it reads
 the class names out of the patch files themselves.
+
+## Two traps in the health check's selector extraction
+
+Both cost real debugging time, and both produce the same silent failure the check
+exists to prevent - a rule that no longer matches while the check stays green.
+
+1. **CSS comments are not dependencies.** A class named only in an explanatory
+   comment ("the file-preview variant `.file-markdown-content > .prose` is not
+   touched") gets counted, then fails the check for a class the patch never
+   targets. Comments are stripped before scanning.
+2. **Every class of a compound selector must be extracted, not just the first.**
+   `.sponsored-ad.ad-banner` must yield *both* names. Taking only `sponsored-ad`
+   would leave the variant unchecked - and the variant is exactly the part a
+   release is most likely to rename, since it selects which ad surface the rule
+   applies to. Negative test: remove the bundle's `ad-banner` string and the check
+   must report `missing=['ad-banner']`.

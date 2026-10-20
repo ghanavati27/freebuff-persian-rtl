@@ -149,6 +149,15 @@ What the script does:
 6. **Health check**: extracts every class the patch relies on and confirms it
    still exists in the shipped bundle. Reports any that vanished.
 
+   It reads the class names out of the patch files themselves, so a later edit to
+   the selector list is picked up automatically - **including every class of a
+   compound selector**. That last part matters: taking only the first class would
+   mean `.sponsored-ad.ad-banner` checked `sponsored-ad` alone, so a release that
+   renamed the variant - the part that decides *which* ad surface a rule hides -
+   would leave the rule silently dead while the check stayed green. Verified by a
+   negative test: with the bundle's `ad-banner` string removed, the check reports
+   `missing=['ad-banner']` rather than passing.
+
 Exit status `1` means "applied, but some selectors look stale" - read the
 output and update the selector list (see section 7). Exit status `2` is a hard
 failure (app not found, or `index.html` no longer has the expected shape).
