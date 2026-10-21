@@ -272,3 +272,20 @@ Verified by `tools/verify_break_autocontinue.py`:
 
 The JS half now carries this second, non-RTL job; the stylesheet deliberately
 does not hide the modal, and `tools/verify_ads_hidden.py` asserts that.
+
+### 0.0.183
+- App updated; bundle renamed (`index-Dy3ub5tq.js` / `index-0QscbrWU.css`).
+- All 83 selectors + 1 overridden property still present - **no patch change
+  needed**. Patch re-applied, `index.html` re-tagged on lines 217-218, fresh
+  backup written. Health check 83/83, exit 0.
+- All three acceptance harnesses re-run against the new bundle and passing:
+  - `verify_ads_hidden.py` - 4 ad surfaces hidden, `.sponsor-intermission`
+    scope guard still visible (`flex 1x849` both).
+  - `verify_break_autocontinue.py` - 0 clicks while disabled, exactly 1 once
+    enabled, no repeats, a fresh break picked up.
+  - `verify_chat_width.py` - 16/16 geometry rows, pixel cross-check 704 -> 1177px.
+- Bundle scan: 107 uncovered classes carrying text directly (up from 102). The 5
+  new ones (`.artifacts-error`, `.domain-option-heading`, `.site-chat-menu-note`,
+  `.site-menu-check`, `.site-menu-status`) are English app chrome - a
+  subdomain-error line, a domain-picker heading and a site-menu status row.
+  None carry user or model text, so none were added.
