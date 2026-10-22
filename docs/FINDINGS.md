@@ -289,3 +289,36 @@ does not hide the modal, and `tools/verify_ads_hidden.py` asserts that.
   `.site-menu-check`, `.site-menu-status`) are English app chrome - a
   subdomain-error line, a domain-picker heading and a site-menu status row.
   None carry user or model text, so none were added.
+
+### 0.0.186
+- App updated; bundle renamed (`index-qL1TxIwV.js` / `index-DVFThbPT.css`).
+- All 83 selectors + 1 overridden property still present - **no patch change
+  needed**. Patch re-applied (idempotent), tags confirmed on lines 217-218,
+  fresh backup written. Health check 83/83, exit 0.
+- All three acceptance harnesses re-run against the new bundle and passing:
+  - `verify_ads_hidden.py` - 4 ad surfaces hidden; `.sponsor-intermission`
+    scope guard still visible (`flex 1x849` both).
+  - `verify_break_autocontinue.py` - 0 clicks while disabled, exactly 1 once
+    enabled, no repeats, a fresh break picked up.
+  - `verify_chat_width.py` - 16/16 geometry rows, pixel cross-check
+    704 -> 1177px.
+- **Structural dependency check.** Ten structures the patch relies on were
+  verified in the new bundle, not just the class names: the
+  `sponsored-ad ad-${t}` className template, the telemetry selector constant,
+  `.sponsor-intermission` as a `role="dialog" aria-modal="true"` modal with
+  `.intermission-continue`, `impUrl` on click, `--chat-content-max-width:720px`
+  and the `--chat-gutter` formula in the app's `:root`, the `.prose` 860px
+  inner cap, `.project-sidebar{width:216px}` and `--explorer-width:440px`.
+  All ten intact.
+- **Trap hit while scanning: grep the right bundle.** Three of those ten checks
+  initially reported MISSING because CSS-only strings (`.prose{...860px}`,
+  `.project-sidebar{width:216px}`, `--explorer-width:440px`) were searched in
+  the JS bundle, and the aria-label pattern carried a stray escape. A
+  "MISSING" from a dependency scan is not evidence of a change until it has
+  been re-checked against the file the string actually lives in.
+- Bundle scan: 110 uncovered classes carrying text directly (up from 107).
+  4 new, all English app chrome: `.template-card-description`,
+  `.template-card-name`, `.template-strip-heading` (a template picker) and
+  `.site-chat-menu-note`. One class went: `.side-chat-menu-note`, renamed to
+  `.site-chat-menu-note` ("side" -> "site"). Neither was ever covered by the
+  patch, so the rename has no effect on it.

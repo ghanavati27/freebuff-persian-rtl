@@ -93,3 +93,22 @@ with this document, so a relative href on a deep path resolves to
 A hard failure (exit 2) after "installed -> assets/..." but with no
 "index.html -> added ..." line means the anchor was not found. That is this
 class of change; the assets are on disk but the patch is **not active**.
+
+## 0.0.186 - grep the bundle the string actually lives in
+
+A structural dependency scan reported three "MISSING" entries that turned out
+to be fine. The causes:
+
+1. CSS-only strings (`.prose{...860px}`, `.project-sidebar{width:216px}`,
+   `--explorer-width:440px`) were searched in the **JS** bundle. The UI ships as
+   two files; a rule lives in exactly one of them. Before reporting a structure
+   as gone, re-check it against the file it lives in - the CSS for rules and
+   custom properties, the JS for className templates, JSX attributes and event
+   wiring.
+2. A pattern written for printed output (with `\"` escapes) was run against the
+   raw file, where no backslash exists. Write patterns against the file's real
+   bytes, not against how a print of it looked.
+
+A "MISSING" from a scan is a hypothesis until re-checked. The class health check
+in the installer already reads both files; a hand-written structural scan must
+do the same.
