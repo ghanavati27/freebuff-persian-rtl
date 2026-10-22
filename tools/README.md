@@ -129,3 +129,30 @@ counter back out of the page:
 
 Note the harness template is substituted with `str.replace`, not `str.format`:
 the inline script is full of braces and `.format` treats them as fields.
+
+## Interpreter
+
+Every tool here needs Selenium + Pillow, and Selenium Manager additionally needs
+certifi. Run them with an interpreter that has all three:
+
+| Interpreter | selenium | pillow | certifi |
+|---|---|---|---|
+| `%LOCALAPPDATA%\hermes\hermes-agentenv\Scripts\python.exe` | 4.48.0 | 12.3.0 | 2026.05.20 |
+| `C:\Python314\python.exe` | 4.46.0 | 12.3.0 | **missing** - Selenium Manager fails |
+
+**Do not assume the default `python` works.** In a Hermes session it can resolve
+to a per-session venv (`...\hermes\installs\<id>\environments\<id>env\`)
+that has neither package and no `pip` at all. A run that succeeded earlier in the
+same session can start failing once that environment is recreated, and the error
+is only `could not start ChromeDriver: No module named '<x>'` - an interpreter
+problem, not a patch problem. The tools now say so explicitly; this table is the
+fix.
+
+Known-good invocation:
+
+```bat
+"%LOCALAPPDATA%\hermes\hermes-agentenv\Scripts\python.exe" toolserify_ads_hidden.py
+```
+
+Note `apply_fb_persian_patch.py` has no such requirement - it is stdlib only, so
+the default `python` is fine for applying and health-checking the patch.

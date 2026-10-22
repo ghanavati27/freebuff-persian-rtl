@@ -322,3 +322,41 @@ does not hide the modal, and `tools/verify_ads_hidden.py` asserts that.
   `.site-chat-menu-note`. One class went: `.side-chat-menu-note`, renamed to
   `.site-chat-menu-note` ("side" -> "site"). Neither was ever covered by the
   patch, so the rename has no effect on it.
+
+### 0.0.188
+- App updated; bundle renamed (`index-C422Roxo.js` / `index-DMHSA4jb.css`).
+- All 83 selectors + 1 overridden property still present - **no patch change
+  needed**. Patch re-applied, tags confirmed on lines 217-218, fresh backup
+  written. Health check 83/83, exit 0.
+- Delta analysis against 0.0.186:
+  - **Class surface identical** - 0 text-bearing classes added, 0 removed
+    (110 uncovered both times).
+  - **18/18 structural dependencies intact**, each checked in the bundle it
+    actually lives in: the CSS `:root` chat-width property and `--chat-gutter`
+    formula, the `.prose` 860px inner cap, `.project-sidebar{width:216px}`,
+    `--explorer-width:440px`, the `.ad-banner` / `.ad-showcase` /
+    `.intermission-body` / `.messages` rules; and in the JS the
+    `sponsored-ad ad-${t}` template, the telemetry ad selector, the
+    "Sponsored break" modal with `.sponsor-intermission` +
+    `.intermission-continue` + `aria-modal`, `impUrl`, `.sponsored-proposal`
+    and `.placement-sidebar-card`.
+- All three acceptance harnesses re-run and passing: ads hidden (4 surfaces +
+  scope guard intact), break auto-continue (0/1/1/2 clicks across the four
+  phases), chat width (16/16 rows, pixel cross-check 704 -> 1177px).
+
+### Environment trap: the session interpreter changed mid-session
+
+The three harnesses first failed with
+`ERROR: could not start ChromeDriver: No module named 'selenium'` - then, under
+`C:\Python314`, `No module named 'certifi'`. Neither was a patch problem: the
+default `python` now resolves to a **per-session Hermes venv** that has no
+selenium, no Pillow and no `pip`, and it had been recreated between turns.
+
+- Known-good: `%LOCALAPPDATA%\hermes\hermes-agentenv\Scripts\python.exe`
+  (selenium 4.48.0, pillow 12.3.0, certifi 2026.05.20).
+- `C:\Python314\python.exe` has selenium 4.46.0 + pillow but **no certifi**, so
+  Selenium Manager still fails there.
+- `apply_fb_persian_patch.py` is stdlib-only and is unaffected.
+
+The tools now name this explicitly instead of printing a bare module error, and
+`tools/README.md` documents the interpreter table.

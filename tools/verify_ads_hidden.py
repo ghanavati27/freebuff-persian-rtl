@@ -195,6 +195,13 @@ def main() -> int:
         driver = make_driver(args.headful, os.path.join(tmp, "ud"))
     except Exception as exc:  # surfaced verbatim
         print("ERROR: could not start ChromeDriver: %s" % exc, file=sys.stderr)
+        if "No module named" in str(exc):
+            print(
+                "This is an INTERPRETER problem, not a patch problem. Selenium "
+                "needs selenium + certifi; the pixel checks need Pillow. The "
+                "default `python` in a Hermes session venv may have none of "
+                "them. See the Interpreter note in tools/README.md.",
+                file=sys.stderr)
         return 2
     print("chrome : %s" % driver.capabilities.get("browserVersion"))
     print("scratch: %s\n" % tmp)
