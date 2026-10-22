@@ -352,7 +352,7 @@ The three harnesses first failed with
 default `python` now resolves to a **per-session Hermes venv** that has no
 selenium, no Pillow and no `pip`, and it had been recreated between turns.
 
-- Known-good: `%LOCALAPPDATA%\hermes\hermes-agentenv\Scripts\python.exe`
+- Known-good: `%LOCALAPPDATA%\hermes\hermes-agent\venv\Scripts\python.exe`
   (selenium 4.48.0, pillow 12.3.0, certifi 2026.05.20).
 - `C:\Python314\python.exe` has selenium 4.46.0 + pillow but **no certifi**, so
   Selenium Manager still fails there.

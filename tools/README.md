@@ -89,7 +89,7 @@ measurement.
 The acceptance test for the ad-hiding section. Requires Selenium + a Chromium.
 
 ```bat
-python toolserify_ads_hidden.py
+python tools\verify_ads_hidden.py
 ```
 
 Renders the real ad markup (traced out of the bundle's own JSX) against the real
@@ -113,7 +113,7 @@ The acceptance test for the sponsored-break auto-continue in the runtime half.
 Requires Selenium + a Chromium.
 
 ```bat
-python toolserify_break_autocontinue.py
+python tools\verify_break_autocontinue.py
 ```
 
 Renders the real break markup with the real patch script loaded, attaches a click
@@ -137,11 +137,11 @@ certifi. Run them with an interpreter that has all three:
 
 | Interpreter | selenium | pillow | certifi |
 |---|---|---|---|
-| `%LOCALAPPDATA%\hermes\hermes-agentenv\Scripts\python.exe` | 4.48.0 | 12.3.0 | 2026.05.20 |
+| `%LOCALAPPDATA%\hermes\hermes-agent\venv\Scripts\python.exe` | 4.48.0 | 12.3.0 | 2026.05.20 |
 | `C:\Python314\python.exe` | 4.46.0 | 12.3.0 | **missing** - Selenium Manager fails |
 
 **Do not assume the default `python` works.** In a Hermes session it can resolve
-to a per-session venv (`...\hermes\installs\<id>\environments\<id>env\`)
+to a per-session venv (`...\hermes\installs\<id>\environments\<id>\venv\`)
 that has neither package and no `pip` at all. A run that succeeded earlier in the
 same session can start failing once that environment is recreated, and the error
 is only `could not start ChromeDriver: No module named '<x>'` - an interpreter
@@ -151,7 +151,7 @@ fix.
 Known-good invocation:
 
 ```bat
-"%LOCALAPPDATA%\hermes\hermes-agentenv\Scripts\python.exe" toolserify_ads_hidden.py
+"%LOCALAPPDATA%\hermes\hermes-agent\venv\Scripts\python.exe" tools\verify_ads_hidden.py
 ```
 
 Note `apply_fb_persian_patch.py` has no such requirement - it is stdlib only, so
