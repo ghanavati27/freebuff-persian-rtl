@@ -4,9 +4,9 @@
    Local patch. NOT part of the shipped bundle. Re-applied after app updates.
 
    The direction work is done by the companion script (fb-persian-rtl.js), which
-   decides each text-bearing element's direction from its DOMINANT SCRIPT and
-   writes it as dir="rtl" / dir="ltr". Sections 1-4 add the Persian font and
-   rules keyed on that, so an LTR user's rendering stays the shipped one.
+   sets dir="auto" on the app's text-bearing elements. Sections 1-4 add the
+   Persian font and rules keyed on :dir(rtl), so an LTR user's rendering stays
+   the shipped one.
 
    Section 5 is deliberately different: it is a LAYOUT exception that applies to
    every language, by request. Section 6 hides the app's ad surfaces, which is
@@ -55,18 +55,11 @@
 /* ---------------------------------------------------------------------------
    2) Alignment.
    The bundle hard-codes text-align:left in places (.question-option, .qbody,
-   .prose td/th, ...). An explicit direction attribute cannot undo that, so
+   .prose td/th, ...). `dir="auto"` sets the direction but cannot undo that, so
    neutralise it - but ONLY on elements this patch marked AND that actually
-   resolved to RTL. An LTR element never matches, so the shipped rule stands
-   untouched for an English-speaking user.
-
-   The script sets dir="rtl" or dir="ltr" from the dominant script, and leaves
-   dir="auto" only where the text has no letters at all. So this has to cover
-   both: the explicit marker, and an auto element the browser resolved to RTL.
-   The app itself never sets a dir attribute (checked against the bundle), so
-   [dir="rtl"] can only ever match what this patch wrote.
+   resolved to RTL. An LTR element never matches :dir(rtl), so the shipped rule
+   stands untouched for an English-speaking user.
    --------------------------------------------------------------------------- */
-[dir="rtl"],
 [dir="auto"]:dir(rtl) {
   text-align: start;
 }
@@ -96,10 +89,10 @@
    The bundle reserves the ::marker's room with padding-left and draws the quote
    bar with border-left. In RTL both have to move to the right side.
 
-   These are keyed on :has(...) rather than on the element's own direction
-   attribute, because a marked element whose text lives entirely inside other
-   marked descendants is skipped when the browser resolves that element's own
-   direction - it would fall back to LTR and the marker would be stranded.
+   These are keyed on :has(...) rather than on the element's own dir="auto",
+   because a dir="auto" element whose text lives entirely inside other
+   dir="auto" descendants is skipped when the browser resolves that element's
+   own direction - it would fall back to LTR and the marker would be stranded.
    --------------------------------------------------------------------------- */
 .prose ul:has(> li:dir(rtl)),
 .prose ol:has(> li:dir(rtl)) {

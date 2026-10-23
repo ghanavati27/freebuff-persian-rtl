@@ -3,43 +3,16 @@
    ----------------------------------------------------------------------------
    Local patch. NOT part of the shipped bundle. Re-applied after app updates.
 
-   Why a script and not CSS: CSS cannot ask "is this element's content RTL?", so
-   it can never move a checkbox to the right for Persian while leaving an English
-   row untouched. The script decides an element's direction and sets it as an
-   attribute, which fixes the text order, the alignment AND the flex-row
-   direction (so [icon][text] rows mirror correctly).
+   Why this exists: CSS cannot ask "is this element's content RTL?", so it can
+   never move a checkbox to the right for Persian while leaving an English row
+   untouched. `dir="auto"` can: the element derives its own direction from its
+   first strong character, which fixes the text order, the alignment AND the
+   flex-row direction (so [icon][text] rows mirror correctly).
 
-   WHY NOT dir="auto": `dir="auto"` resolves direction from the element's FIRST
-   STRONG CHARACTER (HTML spec). A Persian paragraph that happens to begin with a
-   URL, a file path or a variable name therefore resolved to LTR - the whole
-   block left-aligned and every line's bidi order computed against the wrong base
-   direction. Measured on the real markup: a paragraph of
-   "http://127.0.0.1:3000 با توضیح در همان فایل ..." laid out with its ink at the
-   box's LEFT edge under `auto`, and at the RIGHT edge under this rule.
-
-   So direction is decided from the DOMINANT SCRIPT by WORD, not by character:
-   each whitespace-separated token votes for the script of its own letters and
-   the majority wins. Ties go to Persian (this is a Persian-language patch, and a
-   tie means the text is genuinely mixed). An element with no letters at all -
-   only digits, punctuation or symbols - keeps `dir="auto"`, exactly what it had
-   before.
-
-   Counting CHARACTERS instead is the mistake this replaced. Persian prose that
-   names a few English identifiers is still Persian prose, but identifiers are
-   long, so a handful of them can out-vote a whole sentence. Measured on 8,633
-   mixed-script paragraphs from real conversations the two rules disagreed 495
-   times; reading the 494 where the word rule says rtl, every one was Persian
-   prose carrying English paths or identifiers.
-
-   Guarantee for LTR users: Latin-dominant content gets `dir="ltr"`, which is
-   precisely the shipped layout - the same value `dir="auto"` resolved to for it.
-   No attribute value, alignment or row order changes. Verified by a pixel diff
-   of the control vs patched render of a Latin-only page.
-
-   STREAMING: replies arrive token by token, so a paragraph can start Latin-
-   dominant (a URL) and become Persian-dominant a moment later. Direction is
-   therefore recomputed on text changes too, not only on insertion - debounced,
-   so a stream does not turn into a re-layout per token.
+   Guarantee for LTR users: `dir="auto"` on Latin content resolves to `ltr`,
+   which is exactly the shipped layout - no attribute value, no alignment and
+   no row order changes. Verified by a pixel diff of the control vs patched
+   render of a Latin-only page.
 
    The companion stylesheet only adds the Persian font (scoped to Arabic-script
    code points) plus a couple of rules keyed on :dir(rtl), so nothing it does
@@ -115,68 +88,8 @@
     '.preview-context-text'
   ].join(',');
 
-  /* ---------------------------------------------------------------------------
-     Direction from the dominant script - by WORD, not by character.
-
-     A character count is the wrong measure and it failed in practice. Persian
-     prose that names a few English identifiers is still Persian prose, but
-     identifiers are long: `SITE_BASE_URL` is one word and thirteen characters,
-     so a handful of them can out-vote a whole sentence of Persian. Measured on
-     8,633 mixed-script paragraphs from real conversations, a character count and
-     a word count disagreed 495 times; reading all 494 of the ones where the word
-     count says rtl, every one was Persian prose carrying English paths or
-     identifiers. Only 1 went the other way, and it was a genuinely bilingual
-     list. So the word count is the rule.
-
-     Tokens are split on whitespace and each token votes by its OWN letters, so a
-     token that mixes scripts still casts one vote. Digits, punctuation, spaces
-     and the zero-width joiner carry no letters and do not vote at all - a token
-     like `§7.34` is skipped rather than counted as Latin.
-     --------------------------------------------------------------------------- */
-  function isArabicLetter(c) {
-    return (c >= 0x0600 && c <= 0x06ff) ||   /* Arabic                */
-           (c >= 0x0750 && c <= 0x077f) ||   /* Arabic Supplement     */
-           (c >= 0x08a0 && c <= 0x08ff) ||   /* Arabic Extended-A     */
-           (c >= 0xfb50 && c <= 0xfdff) ||   /* Arabic Presentation A */
-           (c >= 0xfe70 && c <= 0xfeff);     /* Arabic Presentation B */
-  }
-
-  function isLatinLetter(c) {
-    return (c >= 0x41 && c <= 0x5a) ||       /* A-Z                    */
-           (c >= 0x61 && c <= 0x7a) ||       /* a-z                    */
-           (c >= 0x00c0 && c <= 0x024f);     /* Latin-1 + Extended A/B */
-  }
-
-  /* 'rtl', 'ltr', or null when the text holds no letters at all. */
-  function dominantDir(text) {
-    if (!text) return null;
-    var tokens = text.split(/\s+/);
-    var arabic = 0, latin = 0;
-    for (var i = 0; i < tokens.length; i++) {
-      var token = tokens[i], a = 0, l = 0;
-      for (var j = 0; j < token.length; j++) {
-        var c = token.charCodeAt(j);
-        if (isArabicLetter(c)) a++;
-        else if (isLatinLetter(c)) l++;
-      }
-      if (!a && !l) continue;                /* no letters: no vote */
-      if (a >= l) arabic++;
-      else latin++;
-    }
-    if (!arabic && !latin) return null;
-    return arabic >= latin ? 'rtl' : 'ltr';  /* ties go to Persian */
-  }
-
-  /* Elements this script has marked, so a changed text node can be traced back
-     to the element whose direction has to be recomputed. A WeakSet, so nothing
-     is retained. */
-  var marked = new WeakSet();
-
   function mark(el) {
-    if (!el || el.nodeType !== 1) return;
-    var want = dominantDir(el.textContent) || 'auto';
-    if (el.getAttribute('dir') !== want) el.setAttribute('dir', want);
-    marked.add(el);
+    if (el.getAttribute('dir') !== 'auto') el.setAttribute('dir', 'auto');
   }
 
   function apply(root) {
@@ -190,73 +103,14 @@
     }
   }
 
-  /* ---------------------------------------------------------------------------
-     Streaming: recompute when text changes.
-
-     A reply arrives token by token, and React replaces the text node rather than
-     mutating it, so BOTH cases have to be handled - a childList record whose node
-     is a Text node is not an element, and `apply()` would skip it, leaving the
-     direction stale.
-
-     Recomputing is debounced: without it a fast stream re-lays out the paragraph
-     on every token. A paragraph is allowed to flip ltr -> rtl once enough Persian
-     has arrived - that is the point of the change - and the debounce keeps it to
-     a single flip instead of a flicker.
-     --------------------------------------------------------------------------- */
-  var DIR_DEBOUNCE_MS = 120;
-  var dirty = [];
-  var dirtyTimer = null;
-
-  function nearestMarked(node) {
-    var el = node;
-    if (el && el.nodeType !== 1) el = el.parentElement;
-    while (el) {
-      if (marked.has(el)) return el;
-      if (el.matches && el.matches(SELECTOR)) return el;
-      el = el.parentElement;
-    }
-    return null;
-  }
-
-  function scheduleMark(el) {
-    if (dirty.indexOf(el) === -1) dirty.push(el);
-    if (dirtyTimer !== null) return;
-    dirtyTimer = setTimeout(function () {
-      dirtyTimer = null;
-      var list = dirty;
-      dirty = [];
-      for (var i = 0; i < list.length; i++) {
-        if (list[i].isConnected) mark(list[i]);
-      }
-    }, DIR_DEBOUNCE_MS);
-  }
-
   function start() {
     new MutationObserver(function (records) {
       for (var r = 0; r < records.length; r++) {
-        var rec = records[r];
-
-        if (rec.type === 'characterData') {
-          var host = nearestMarked(rec.target.parentNode);
-          if (host) scheduleMark(host);
-          continue;
-        }
-
-        var added = rec.addedNodes;
-        for (var n = 0; n < added.length; n++) {
-          var node = added[n];
-          if (node.nodeType === 1) {
-            apply(node);
-          } else if (node.nodeType === 3) {
-            var owner = nearestMarked(node.parentNode);
-            if (owner) scheduleMark(owner);
-          }
-        }
+        var added = records[r].addedNodes;
+        for (var n = 0; n < added.length; n++) apply(added[n]);
       }
       watchSponsoredBreak();
-    }).observe(document.documentElement, {
-      childList: true, subtree: true, characterData: true
-    });
+    }).observe(document.documentElement, { childList: true, subtree: true });
 
     apply(document.documentElement);
     watchSponsoredBreak();
