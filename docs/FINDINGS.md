@@ -360,3 +360,65 @@ selenium, no Pillow and no `pip`, and it had been recreated between turns.
 
 The tools now name this explicitly instead of printing a bare module error, and
 `tools/README.md` documents the interpreter table.
+
+## Paragraph direction from the dominant script (replaces dir="auto")
+
+**The bug.** `dir="auto"` resolves direction from an element's FIRST STRONG
+CHARACTER (HTML spec). A Persian paragraph that happens to begin with a URL, a
+file path or a variable name therefore resolved to LTR: the whole block
+left-aligned and every line's bidi order computed against the wrong base
+direction. The user reported it with a screenshot; measured on the real markup,
+a paragraph of `http://127.0.0.1:3000 با توضیح در همان فایل ...` laid out with
+its ink at the box's LEFT edge, while a Persian-first paragraph of the same
+length laid out at the RIGHT edge.
+
+**The fix.** Count Arabic-block letters against Latin letters and take the
+majority, ties to Persian. Only LETTERS vote: digits, punctuation, spaces and
+the zero-width joiner are script-neutral, or a long URL inside Persian prose
+could outvote the prose. No letters at all keeps `dir="auto"`, exactly as before.
+
+**The constraint that shaped it.** Forcing `dir="rtl"` on everything would have
+fixed the reported case and broken genuinely English paragraphs. Measured, with
+the ink edge of each paragraph as the verdict:
+
+| strategy | A latin-first Persian | B genuinely English | C persian-first |
+|---|---|---|---|
+| `auto` (old) | left (wrong) | left (correct) | right (correct) |
+| `rtl` on all | right | right (WRONG) | right |
+| dominant (new) | right | left | right |
+
+**Streaming.** Replies arrive token by token, so a paragraph can start
+Latin-dominant and become Persian-dominant. Direction is recomputed on text
+changes too, debounced 120ms. React replaces the text node rather than mutating
+it, so childList records whose node is a Text node must be handled as well as
+`characterData` records - `apply()` skips a Text node and would leave the
+direction stale.
+
+**The CSS had to move with it.** The alignment reset was keyed on
+`[dir="auto"]:dir(rtl)`, which stops matching once the script writes `rtl`/`ltr`.
+It is now `[dir="rtl"], [dir="auto"]:dir(rtl)`. Safe because the app never sets a
+dir attribute itself - checked against the bundle, whose only `dir:` hit is the
+unrelated language-definition string `dir:"qmldir"`.
+
+**One trap is now historical.** Under `dir="auto"`, a marked container whose text
+sat entirely inside marked descendants was skipped and fell back to LTR. Direction
+now comes from `dominantDir(el.textContent)`, which includes marked descendants,
+so marking a container works. Lists and blockquotes are still left to the
+stylesheet's `:has()` rules - their geometry is a marker/bar position, not a
+direction.
+
+### Verified by `tools/verify_paragraph_direction.py`
+
+Loads the REAL patch file (not a reimplementation) and measures with Pillow:
+
+| case | dir | measured |
+|---|---|---|
+| A latin-first, mostly Persian | `rtl` | ink L119..R822 -> right |
+| B genuinely English | `ltr` | ink L62..R786 -> left |
+| C persian-first | `rtl` | ink L120..R822 -> right |
+| E digits/punctuation only | `auto` | ink L62..R222 -> left (unchanged) |
+| D streamed: Latin-dominant -> Persian | `ltr` -> `rtl` | left -> right |
+| LTR regression, Latin-only page | - | **IDENTICAL: 0 differing pixels** |
+
+The other three harnesses were re-run against the new script and all pass:
+`verify_ads_hidden.py`, `verify_break_autocontinue.py`, `verify_chat_width.py`.

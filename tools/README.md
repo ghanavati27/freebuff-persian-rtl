@@ -156,3 +156,27 @@ Known-good invocation:
 
 Note `apply_fb_persian_patch.py` has no such requirement - it is stdlib only, so
 the default `python` is fine for applying and health-checking the patch.
+
+## verify_paragraph_direction.py
+
+The acceptance test for the dominant-script decision. Requires Selenium + Pillow.
+
+```bat
+python tools\verify_paragraph_direction.py
+```
+
+It loads the REAL patch files (not a reimplementation of the algorithm) and
+measures each paragraph's ink edge with Pillow:
+
+| Check | Pass condition |
+|---|---|
+| A: latin-first, mostly Persian | right-aligned (this was the reported bug) |
+| B: genuinely English | left-aligned - the fix must not touch it |
+| C: persian-first | right-aligned |
+| E: digits/punctuation only | left-aligned, `dir` stays `auto` |
+| D: streamed paragraph that gains Persian | flips to right-aligned |
+| LTR regression | a Latin-only page is pixel-IDENTICAL with and without the patch |
+
+**The regression baseline must be a Latin-ONLY page.** A mixed page legitimately
+differs once the patch is applied - that difference IS the fix - so using it as
+the baseline produces a permanent false failure.
