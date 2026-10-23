@@ -59,6 +59,14 @@ CASES = [
      "The server restarts with the new env, so the emailed link and the referral "
      "link both point at the same address that your browser opens.", "ltr"),
     ("C_persian_first", PERSIAN + " http://127.0.0.1:3000", "rtl"),
+    # The case the user reported: Persian prose naming several English
+    # identifiers. A CHARACTER count says ltr here (identifiers are long), a WORD
+    # count says rtl - and rtl is correct. This case is what pins the rule.
+    ("F_persian_with_identifiers",
+     "\u0645\u0633\u062a\u0646\u062f\u0627\u062a: README (\u0631\u062f\u06cc\u0641 "
+     "SITE_BASE_URL \u0628\u0627 \u0647\u0634\u062f\u0627\u0631 \u0647\u0627\u0633\u062a) "
+     "\u0648 AGENTS \u0648 PlanToDo1.md \u0648 \u00a77.34 \u0648 roadmap "
+     "\u0631\u0627 \u0628\u0647\u200c\u0631\u0648\u0632 \u06a9\u0646", "rtl"),
     ("E_no_letters", "404 / 127.0.0.1:3000 -- 42 %", "auto"),
 ]
 
@@ -164,6 +172,32 @@ def band_ink(im, y0: int, y1: int):
     return (bbox[0], bbox[2]) if bbox else (None, None)
 
 
+def script_counts(text: str) -> tuple[int, int, int, int]:
+    """(persian chars, latin chars, persian words, latin words) - for the report.
+
+    Printing both makes the whole point of the rule visible: a paragraph can lose
+    a character count and win a word count, and the word count is the one that
+    matches what a reader sees.
+    """
+    AR = ((0x0600, 0x06FF), (0x0750, 0x077F), (0x08A0, 0x08FF),
+          (0xFB50, 0xFDFF), (0xFE70, 0xFEFF))
+    def is_ar(c): return any(lo <= c <= hi for lo, hi in AR)
+    def is_la(c): return (0x41 <= c <= 0x5A) or (0x61 <= c <= 0x7A) or (0x00C0 <= c <= 0x024F)
+    ca = sum(1 for c in text if is_ar(ord(c)))
+    cl = sum(1 for c in text if is_la(ord(c)))
+    wa = wl = 0
+    for tok in text.split():
+        a = sum(1 for c in tok if is_ar(ord(c)))
+        l = sum(1 for c in tok if is_la(ord(c)))
+        if not a and not l:
+            continue
+        if a >= l:
+            wa += 1
+        else:
+            wl += 1
+    return ca, cl, wa, wl
+
+
 def verdict(box_l, box_r, ink_l, ink_r) -> str:
     if ink_l is None:
         return "no ink"
@@ -228,14 +262,19 @@ def main() -> int:
             });""")
 
         im = Image.open(patched_png).convert("L")
+        texts = {c[0]: c[1] for c in CASES}
         print("=== direction per paragraph (real patch, pixel-measured) ===")
-        print("  %-24s %-6s %-8s %-9s %s" % ("case", "attr", "resolved", "ink", "verdict"))
+        print("  %-26s %-5s %-8s %-12s %-16s %s"
+              % ("case", "attr", "resolved", "ink", "chars/words", "verdict"))
         for row in boxes:
             il, ir = band_ink(im, row["boxT"], row["boxB"])
             v = verdict(row["boxL"], row["boxR"], il, ir)
             rows.append((row, il, ir, v))
-            print("  %-24s %-6s %-8s L%s..R%s  %s"
-                  % (row["id"][:24], row["dir"], row["resolved"], il, ir, v))
+            ca, cl, wa, wl = script_counts(texts.get(row["id"], ""))
+            counts = "c%d/%d w%d/%d" % (ca, cl, wa, wl)
+            print("  %-26s %-5s %-8s L%s..R%-6s %-16s %s"
+                  % (row["id"][:26], row["dir"], row["resolved"], il, ir,
+                     counts, v))
 
         by_id = {r[0]["id"]: (r[0], r[3]) for r in rows}
         for cid, _text, want in CASES:

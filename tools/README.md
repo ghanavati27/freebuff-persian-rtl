@@ -180,3 +180,18 @@ measures each paragraph's ink edge with Pillow:
 **The regression baseline must be a Latin-ONLY page.** A mixed page legitimately
 differs once the patch is applied - that difference IS the fix - so using it as
 the baseline produces a permanent false failure.
+
+### Case F: why the rule counts words, not characters
+
+`verify_paragraph_direction.py` includes `F_persian_with_identifiers`, which is
+the paragraph shape the user reported: Persian prose naming several English
+identifiers. Its counts are printed alongside the verdict so the discrimination
+is visible in the output:
+
+```
+F_persian_with_identifiers  rtl  ink L182..R822  chars 35/40  words 12/5  right
+```
+
+The character count says ltr (35 < 40) and the word count says rtl (12 > 5). The
+measured layout is right-aligned, which is correct. If this case ever flips to
+left, the word rule has been broken - that is what the case is for.

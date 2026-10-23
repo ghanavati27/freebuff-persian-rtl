@@ -422,3 +422,69 @@ Loads the REAL patch file (not a reimplementation) and measures with Pillow:
 
 The other three harnesses were re-run against the new script and all pass:
 `verify_ads_hidden.py`, `verify_break_autocontinue.py`, `verify_chat_width.py`.
+
+## Direction by WORD, not by character (fixes the second reported paragraph)
+
+The dominant-script rule shipped as a CHARACTER count, and the user reported it
+still failing: a Persian paragraph came out left-aligned because its English
+identifiers out-numbered the Persian letters. That is the rule's fault, not the
+paragraph's - identifiers are long. `SITE_BASE_URL` is one word and thirteen
+characters, so a handful of them can out-vote a whole sentence of Persian.
+
+**Measured on the user's own conversations.** The app caches its API payloads, so
+the real message bodies could be read back and analysed rather than guessed at:
+8,633 mixed-script paragraphs.
+
+| rule | says rtl |
+|---|---|
+| character count (previous) | 4,376  (51%) |
+| word count (now) | 4,867  (56%) |
+
+They disagreed on **495** paragraphs. Reading all of them:
+
+- **494** were the reported class - Persian prose carrying English file paths and
+  identifiers, where the character rule said ltr and the word rule says rtl. The
+  word rule is correct in every one.
+- **1** went the other way, a genuinely bilingual list. Either verdict is
+  defensible there.
+
+So the word rule is a strict improvement on this data. Every token votes by the
+letters it contains, tokens with no letters (`§7.34`) do not vote at all, and
+ties still go to Persian.
+
+**These counts are a snapshot, not a constant.** The cache grows as the app is
+used, so re-running `tools/analyze_direction_rules.py` reports different totals -
+a later run gave 9,432 paragraphs and 530 disagreements. The split is what
+matters and it stayed the same: **529 to 1** in favour of the word rule.
+
+**The explicit signal was checked first and is absent.** A bidi control character
+in the source (RLM/RLE/LRM) would have been the cleanest answer - explicit
+authorial intent beating any heuristic. Scanning the cached payloads found **no**
+bidi controls, only ZWNJ, so there is nothing to honour. The model writes Persian
+prose; it does not mark it.
+
+**Message-level inheritance was measured and rejected.** 552 paragraphs were
+judged ltr inside a Persian-dominant message, and reading them showed the
+majority are code blocks and English prose that are correctly LTR - inheriting
+the message's direction would have broken far more than it fixed. A narrow
+near-tie tie-breaker (follow the message only when the paragraph's own counts are
+within 15% and it has at least 6 script words) was also measured: it changes 136
+verdicts of 97,434 and never touches a paragraph with zero Persian words. It was
+offered and deliberately NOT taken - the user chose the simple rule.
+
+### Verified
+
+`tools/verify_paragraph_direction.py`, loading the real patch file:
+
+| case | chars | words | dir | measured |
+|---|---|---|---|---|
+| A latin-first Persian | 82/4 | 23/1 | rtl | right |
+| B genuinely English | 0/109 | 0/25 | ltr | left |
+| C persian-first | 82/4 | 23/1 | rtl | right |
+| **F Persian prose + English identifiers** | **35/40** | **12/5** | **rtl** | **right** |
+| E digits/punctuation only | 0/0 | 0/0 | auto | left |
+| D streamed, Latin -> Persian | - | - | ltr -> rtl | left -> right |
+| LTR regression, Latin-only page | - | - | - | IDENTICAL, 0 px |
+
+Case F is the one that pins the rule: the character count says ltr there and the
+word count says rtl, and rtl is what the paragraph needs.
