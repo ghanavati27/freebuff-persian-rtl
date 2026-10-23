@@ -51,8 +51,13 @@ from the patch files themselves and confirms it still appears in the shipped
 bundle:
 
 ```
-selectors  : 76/76 still present in the bundle  (74 direction classes + 2 added by the chat-width section)
+selectors  : 83/83 still present in the bundle
+props      : 1/1 overridden custom properties still defined in the bundle
 ```
+
+The count grows as sections are added to the stylesheet, so **read the numbers
+the run actually prints** rather than trusting this sample - this block still
+said `76/76` several releases after the real count had moved on.
 
 A count below `N/N` means a release renamed or removed a class. Re-derive it per
 `docs/UPDATE_CHECKLIST.md` - do not delete a selector silently.

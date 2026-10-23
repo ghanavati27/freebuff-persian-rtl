@@ -112,3 +112,41 @@ to be fine. The causes:
 A "MISSING" from a scan is a hypothesis until re-checked. The class health check
 in the installer already reads both files; a hand-written structural scan must
 do the same.
+
+## 0.0.190 - a MISSING needs whitespace-tolerant matching
+
+The structural dependency check compares needles against the bundle text.
+Bundles are minified but **not** whitespace-free: 0.0.190 writes
+`--explorer-width: 440px` with a space after the colon while
+`.prose{max-width:860px` has none. A needle written from one release's CSS
+therefore misses in another, and both `--explorer-width` and
+`--chat-content-max-width` were reported MISSING while being plainly present.
+
+Two rules, in order:
+
+1. **Re-check before believing it.** A MISSING from a dependency scan is a
+   hypothesis until the string has been searched for in the file it actually
+   lives in. Three releases in a row have produced at least one false MISSING.
+2. **Fix the match, not the needle.** Strip whitespace from both the needle and
+   the bundle text before comparing. Never widen a needle to a bare property
+   name to make a miss go away - that trades a false negative for a false
+   positive, and the scan exists precisely to notice when a dependency moves.
+
+Known false-MISSING causes so far: a CSS-only string searched in the JS bundle
+(0.0.186), a stray escape in an aria-label pattern (0.0.186), and a missing
+space in the needle (0.0.190).
+
+## 0.0.190 - the text-surface scan has a fixed definition now
+
+`tools/scan_text_surfaces.py` is the scan the update log keeps citing. Run it
+after every update:
+
+```
+python tools/scan_text_surfaces.py --list 40
+```
+
+It reports classes that carry text DIRECTLY in the bundle (`className:"x"` with
+a literal `children:"..."` nearby) and are not referenced by the patch. Read the
+**Arabic-script count**, not the total: a Persian string the patch does not
+reach is a real miss, while uncovered English chrome is expected. The totals
+recorded before this tool existed are not comparable to its output.

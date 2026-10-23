@@ -360,3 +360,29 @@ selenium, no Pillow and no `pip`, and it had been recreated between turns.
 
 The tools now name this explicitly instead of printing a bare module error, and
 `tools/README.md` documents the interpreter table.
+
+### 0.0.190
+- App updated; bundle renamed (`index-Cobmrcyj.js` / `index-BZX_IQFm.css`).
+- All 83 selectors + 1 overridden property still present - **no patch change
+  needed**. The update wiped the whole `ui/` including the previous backup, so a
+  fresh `index.html.fb-persian-backup` was written. Tags confirmed on lines
+  217-218. Health check 83/83, exit 0.
+- **18/18 structural dependencies intact**, each re-checked in the bundle it
+  actually lives in. **Two were first reported MISSING and both were false
+  alarms** - the third release in a row to produce one, so the pattern is now
+  written up in `docs/UPDATE_CHECKLIST.md`.
+- All three acceptance harnesses re-run against the new bundle and passing:
+  - `verify_ads_hidden.py` - 4 ad surfaces hidden; `.sponsor-intermission`
+    scope guard still visible (`flex 1x849` both).
+  - `verify_break_autocontinue.py` - 0 clicks while disabled, exactly 1 once
+    enabled, no repeats, a fresh break picked up.
+  - `verify_chat_width.py` - 16/16 geometry rows, pixel cross-check
+    704 -> 1177px, identical to 0.0.188, so the layout did not move.
+- **The text-surface scan now has a fixed definition.** New tool:
+  `tools/scan_text_surfaces.py` reports classes that carry text directly and are
+  not covered by the patch. The per-version counts recorded above (92, 94, 101,
+  102, 107, 110) came from an unrecorded ad-hoc method and are **not comparable**
+  to anything this tool produces - it reports 517 for 0.0.190. The comparable
+  number, and the one worth reading, is the Arabic-script subset: **0 of those
+  517 carry Arabic-script text.** A Persian string the patch fails to reach
+  would appear there; English app chrome is expected and harmless.

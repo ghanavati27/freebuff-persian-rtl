@@ -130,6 +130,35 @@ counter back out of the page:
 Note the harness template is substituted with `str.replace`, not `str.format`:
 the inline script is full of braces and `.format` treats them as fields.
 
+## scan_text_surfaces.py
+
+The "did the app grow a new text surface we do not cover?" probe that the
+update log keeps citing. Requires no third-party modules.
+
+```bat
+python tools\scan_text_surfaces.py
+python tools\scan_text_surfaces.py --list 40
+```
+
+A class counts as **text-bearing** when the bundle attaches a literal
+`children:"..."` string to a `className:"..."` element within ~220 characters -
+i.e. text written directly in the JSX. Text passed from a variable is not
+counted, which is the right call: a variable could hold anything.
+
+It prints the uncovered count and then the subset that actually matters:
+
+```
+UNCOVERED  : 517
+  of which Arabic-script text: 0  <-- must be 0
+```
+
+**Read the Arabic-script count, not the total.** Uncovered English app chrome is
+expected and harmless; a Persian string the patch fails to reach is a real miss.
+
+The totals recorded in `docs/FINDINGS.md` before this tool existed (92, 94, 101,
+102, 107, 110) came from an undocumented ad-hoc method and are **not comparable**
+to its output. Only runs made with this tool can be compared with each other.
+
 ## Interpreter
 
 Every tool here needs Selenium + Pillow, and Selenium Manager additionally needs
