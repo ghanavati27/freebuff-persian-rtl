@@ -19,11 +19,25 @@ bundle names out of `index.html`. The risk is **class renaming**: a selector in
 
    Read the `selectors: N/M` line. If `M < N`, some selectors are stale.
 
-2. **Locate the new bundle.** Read the CSS and JS file names from
+2. **Run the two structural scans.** Both are cheap, and both catch failures the
+   class check cannot see:
+
+   ```bat
+   python tools\check_dependencies.py
+   python tools\scan_text_surfaces.py
+   ```
+
+   `check_dependencies.py` reports `N/N` and names the bundle each dependency
+   was found in. `scan_text_surfaces.py` reports uncovered text-bearing classes;
+   **read its Arabic-script count**, which should be 0. Treat a MISSING from
+   either one as a hypothesis - re-check the needle in the file it should live
+   in before concluding that anything moved.
+
+3. **Locate the new bundle.** Read the CSS and JS file names from
    `index.html` (`<link href="./assets/index-*.css">`,
    `<script src="./assets/index-*.js">`). Never hard-code them.
 
-3. **Find the replacement classes.** In the bundle JS, class names appear as
+4. **Find the replacement classes.** In the bundle JS, class names appear as
    `className:"..."` or `"class":"..."` in the minified output. Search for the
    *old* name; if it is gone, search for a near match and for the UI string
    that element renders.
@@ -36,21 +50,21 @@ bundle names out of `index.html`. The risk is **class renaming**: a selector in
    text the element carries. That decides whether it is user/model text
    (needs `dir="auto"`) or app chrome (does not).
 
-4. **Update the patch.** Edit `patch/fb-persian-rtl.js` (runtime selectors) or
+5. **Update the patch.** Edit `patch/fb-persian-rtl.js` (runtime selectors) or
    `patch/fb-persian-rtl.css` (`:dir(rtl)` geometry rules). Keep the rules
    `:dir(rtl)`-keyed - an unkeyed rule would reach English users.
 
-5. **Re-run the installer** until the health check reports `N/N`:
+6. **Re-run the installer** until the health check reports `N/N`:
 
    ```bat
    python apply_fb_persian_patch.py
    ```
 
-6. **Re-verify.** Follow section 8 of `AGENTS.md` - control/patched pixel diff,
+7. **Re-verify.** Follow section 8 of `AGENTS.md` - control/patched pixel diff,
    LTR regression must be exactly 0 pixels, plus the alignment and diff-tint
    tests on the surfaces that changed.
 
-7. **Record it.** Note the rename or removal in `docs/FINDINGS.md` so the next
+8. **Record it.** Note the rename or removal in `docs/FINDINGS.md` so the next
    agent does not relearn it.
 
 ## If a surface disappears
@@ -150,3 +164,20 @@ a literal `children:"..."` nearby) and are not referenced by the patch. Read the
 **Arabic-script count**, not the total: a Persian string the patch does not
 reach is a real miss, while uncovered English chrome is expected. The totals
 recorded before this tool existed are not comparable to its output.
+
+## 0.0.192 - use tools/check_dependencies.py for the dependency scan
+
+The structural dependency scan is now a tool, not an ad-hoc command:
+
+```
+python tools/check_dependencies.py
+```
+
+It checks each dependency in the bundle it actually lives in, matches
+whitespace-insensitively, and reports **where** each one was found so a MISSING
+can be re-checked in the right file.
+
+Its needle set is a maintained list, so a needle that is wrong shows up
+immediately rather than being rewritten each release: `--project-sidebar` was
+such a needle (the app has the class `.project-sidebar`, not that property) and
+the first 0.0.192 run reported it MISSING before the needle was corrected.

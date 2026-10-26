@@ -386,3 +386,31 @@ The tools now name this explicitly instead of printing a bare module error, and
   number, and the one worth reading, is the Arabic-script subset: **0 of those
   517 carry Arabic-script text.** A Persian string the patch fails to reach
   would appear there; English app chrome is expected and harmless.
+
+### 0.0.192
+- App updated; bundle renamed (`index-CqVmYRQK.js` / `index-A-mFxkKf.css`).
+- All 83 selectors + 1 overridden property still present - **no patch change
+  needed**. The update wiped `ui/` again, so a fresh
+  `index.html.fb-persian-backup` was written and tags landed on lines 217-218.
+  Health check 83/83, exit 0.
+- **18/18 structural dependencies intact** with the new
+  `tools/check_dependencies.py` (this replaces the ad-hoc dependency check that
+  had produced false MISSINGes in three consecutive releases). Its first run
+  flagged `.project-sidebar` - a needle bug in the tool, not a missing
+  dependency: the needle was `--project-sidebar`, a custom property the app does
+  not have, and the class is present in 87 CSS and 10 JS places.
+- **The project sidebar changed.** It is now `width:256px; flex:0 0 256px` (was
+  `216px`) and resizable at runtime (`data-resizing` in the bundle). The 216px
+  value survives only as `@media(max-width:900px)`. `--explorer-width` is
+  unchanged at 440px.
+  **No effect on the patch**, which never reads the sidebar width - confirmed by
+  the width harness, still reporting the identical 704 -> 1177px.
+- Text-surface scan (`tools/scan_text_surfaces.py`): 521 uncovered classes, and
+  again **0 carrying Arabic-script text**. No new Persian surface to cover.
+- All three acceptance harnesses re-run against the new bundle and passing:
+  - `verify_ads_hidden.py` - 4 ad surfaces hidden; `.sponsor-intermission`
+    scope guard still visible (`flex 1x849` both).
+  - `verify_break_autocontinue.py` - 0 clicks while disabled, exactly 1 once
+    enabled, no repeats, a fresh break picked up.
+  - `verify_chat_width.py` - 16/16 geometry rows, pixel cross-check 704 ->
+    1177px.

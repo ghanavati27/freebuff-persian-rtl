@@ -159,6 +159,34 @@ The totals recorded in `docs/FINDINGS.md` before this tool existed (92, 94, 101,
 102, 107, 110) came from an undocumented ad-hoc method and are **not comparable**
 to its output. Only runs made with this tool can be compared with each other.
 
+## check_dependencies.py
+
+The structural scan: what the patch depends on beyond class names - CSS rules,
+a custom-property formula, a `className` template, telemetry selectors, the
+modal's aria roles. Requires no third-party modules.
+
+```bat
+python tools\check_dependencies.py
+```
+
+Each dependency is searched in **every** bundle it could live in, and the report
+says which one matched, so a MISSING can be re-checked in the right file:
+
+```
+  chat-width custom property   css,js
+  transcript inner cap         css
+  sponsored-ad template        js
+```
+
+Exit 0 = all intact; 1 = something missing. **Treat 1 as a hypothesis** - a
+needle that is wrong looks exactly like a dependency that moved, and the
+needle set is now maintained in the tool, so a bad needle surfaces here rather
+than being quietly rewritten each release.
+
+Matching is whitespace-insensitive on both sides. Never widen a needle to a bare
+property name to clear a MISSING - that trades a false negative for a false
+positive.
+
 ## Interpreter
 
 Every tool here needs Selenium + Pillow, and Selenium Manager additionally needs
