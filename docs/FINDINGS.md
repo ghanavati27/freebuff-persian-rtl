@@ -82,3 +82,18 @@ The direction work only ever worked because it is JavaScript.
   610 -> 1050 px, content gap 25 px on the left and ~30 px on the right.
 - The styles are re-applied every 1.2 s: React re-renders the composer subtree
   and drops inline styles, so a one-shot write does not survive.
+
+## Checkboxes and icons at the start of a Persian line
+
+Markdown checklists render as `<li><input type="checkbox"> text</li>`. The input
+is a separate inline element, so `dir="auto"` *on the text* resolves to RTL while
+the paragraph itself stays LTR: the box is painted at the left edge (the LTR
+inline start) and only the text flips. The same happens with an icon or emoji
+before a Persian sentence.
+
+Fix: `fixB()` sets `dir` and `text-align` on the **block** (`li`, `p`,
+`blockquote`, `th`, `td`, skipping containers that hold nested blocks) using the
+same Persian/Latin ratio as the tables (`fa*2 >= la`). A block with no Persian
+characters is pinned to `ltr`. `pre`/`code`/`kbd`/`samp` are forced back to
+`direction: ltr; unicode-bidi: isolate` so code inside an RTL block is not
+mirrored. It runs with the 1.2 s tick for the same React reason.

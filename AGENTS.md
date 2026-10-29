@@ -63,7 +63,10 @@ There is nothing to build and nothing to fork.
    - puts 24 px left/right padding on the lowest common ancestor of transcript
      and composer (sidebar gap and right gap);
    - sets `style.marginRight = '24px'` on `.msg` blocks;
-   - sets `direction: rtl` and right-aligned cells on Persian-dominant tables.
+   - sets `direction: rtl` and right-aligned cells on Persian-dominant tables;
+   - sets `dir`/`text-align` on Persian-dominant blocks (`li`, `p`, `blockquote`,
+     `th`, `td`) so a leading checkbox or icon moves to the right edge, and
+     pins `pre`/`code` to LTR.
 
 Rollback: `python tools\fb_hosted_patch.py --restore`.
 
