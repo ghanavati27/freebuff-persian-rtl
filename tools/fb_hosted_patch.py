@@ -157,7 +157,7 @@ def build_preload(original: str) -> str:
           }
           if(t&&ci){
             var p=lca(t,ci);
-            if(p&&p!==document.body){p.style.paddingLeft='24px';p.style.paddingRight='24px';}
+            if(p&&p!==document.body){p.style.paddingLeft='6px';p.style.paddingRight='6px';}
             var c=ci;while(c&&c.parentElement!==p)c=c.parentElement;
             var cols=[t];if(c&&c!==p)cols.push(c);
             for(var i=0;i<cols.length;i++){var el=cols[i];

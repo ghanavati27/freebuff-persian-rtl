@@ -60,8 +60,9 @@ There is nothing to build and nothing to fork.
    - widens the transcript (`width:100%`, `max-width:1200px`, auto margins) and
      matches the composer to it by climbing from `.composer-box` to the first
      ancestor at least 900 px wide;
-   - puts 24 px left/right padding on the lowest common ancestor of transcript
-     and composer (sidebar gap and right gap);
+   - adds 6 px left/right padding on the lowest common ancestor of transcript and
+     composer; the pane already insets 24 px, so the measured gap is 30 px on each
+     side;
    - sets `style.marginRight = '24px'` on `.msg` blocks;
    - sets `direction: rtl` and right-aligned cells on Persian-dominant tables;
    - sets `dir`/`text-align` on Persian-dominant blocks (`li`, `p`, `blockquote`,
