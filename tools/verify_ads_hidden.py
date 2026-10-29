@@ -35,7 +35,6 @@ TARGETS = [
     (".sponsored-ad.ad-banner", "composer banner"),
     (".ad-showcase", "large sponsor card"),
     (".sponsored-proposal", "sponsored proposal panel"),
-    (".placement-sidebar-card", "sidebar placement"),
 ]
 
 # Surfaces the patch must NOT touch. The intermission is a blocking modal: hiding
@@ -45,8 +44,8 @@ MUST_STAY = [
 ]
 
 # Markup copied from the bundle's own JSX (className: `sponsored-ad ad-${t}`, the
-# ad-showcase tree, the sponsored-proposal <section>, the placement card, and the
-# intermission dialog). Deliberately the real class lists, not lookalikes.
+# ad-showcase tree, the sponsored-proposal <section>, and the intermission
+# dialog). Deliberately the real class lists, not lookalikes.
 HARNESS = """<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <title>ad-hide harness</title>

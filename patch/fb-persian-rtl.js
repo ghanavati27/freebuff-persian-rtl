@@ -42,21 +42,16 @@
        or a Latin identifier has no strong character of its own and would flip
        back to LTR, leaving one column aligned differently from its neighbours. */
     '.prose table',
-    '.run-answer',
     /* the user's own message */
     '.user-message-text',
     /* composer and every other field the user types into */
     '.composer-input', '.composer textarea', '.question-free', '.qedit',
-    '.plan-feedback-input', '.thread-detail-steer-input',
-    '.profile-survey-textarea', '.search-modal-input',
+    '.plan-feedback-input',
     /* agent question dock (question + answers)
        Mark the whole question card, not the rows: a per-row rule lets one
        Latin-first option stay LTR inside a Persian question, which then also
        leaves its Persian description left-aligned. */
-    '.question', '.question-plan', '.plan-action',
-    /* Freebuff 0.0.174: the "What went wrong?" verdict note is a user-typed
-       textarea, so it needs the same dir="auto" treatment as the composer. */
-    '.msg-verdict-note',
+    '.question', '.question-plan',
     /* Freebuff 0.0.174: sponsored intermission headline/subhead are the only
        new surface whose text is served from outside the app bundle. */
     '.intermission-headline', '.intermission-subhead',
@@ -68,24 +63,19 @@
     /* queued prompts */
     '.qbody', '.qprompt', '.qtitle', '.qnote', '.qitem',
     /* model reasoning and tool output */
-    '.reasoning-text', '.reasoning-preview', '.tool-plan', '.tool-row-details',
-    '.run-step-body', '.rpc-output', '.terminal-context-output',
-    '.diff-comment-text', '.change-diff-note', '.file-view-note', '.tool-edit-note',
+    '.reasoning-text', '.reasoning-preview', '.tool-row-details',
+    '.terminal-context-output',
+    '.diff-comment-text', '.change-diff-note', '.file-view-note',
     /* generated titles and list rows */
-    '.sidebar-thread-title', '.threads-row-title-text', '.threadbar-title',
-    '.tab-title', '.thread-detail-title', '.search-result-text',
-    '.search-result-title', '.message-search-match',
+    '.threadbar-title', '.tab-title', '.message-search-match',
     /* other surfaces that carry generated or user text */
-    '.intermission-text', '.fb-skeleton-answer', '.suggested-prompt-main',
+    '.intermission-text', '.suggested-prompt-main',
     '.notice-body', '.crash-message', '.comment-chip-text',
-    '.file-markdown-content', '.artifacts-message', '.artifact-resource-label',
-    '.artifact-table-label', '.proposal-body', '.proposal-title',
+    '.file-markdown-content', '.proposal-body', '.proposal-title',
     '.proposal-offer-text', '.proposal-step-text', '.onboarding-prompt-question',
-    '.profile-survey-question', '.profile-survey-outcome-text',
-    '.prompt-rail-preview', '.domain-explanation', '.mcp-tool-description',
-    '.export-thread-body', '.edit-banner-text', '.agent-prompt', '.agent-body',
-    '.composer-attachment-menu', '.composer-attachment-options',
-    '.preview-context-text'
+    '.mcp-tool-description',
+    '.edit-banner-text', '.agent-prompt', '.agent-body',
+
   ].join(',');
 
   function mark(el) {

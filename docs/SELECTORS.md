@@ -51,7 +51,7 @@ from the patch files themselves and confirms it still appears in the shipped
 bundle:
 
 ```
-selectors  : 83/83 still present in the bundle
+selectors  : 54/54 still present in the bundle
 props      : 1/1 overridden custom properties still defined in the bundle
 ```
 

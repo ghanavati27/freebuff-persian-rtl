@@ -414,3 +414,45 @@ The tools now name this explicitly instead of printing a bare module error, and
     enabled, no repeats, a fresh break picked up.
   - `verify_chat_width.py` - 16/16 geometry rows, pixel cross-check 704 ->
     1177px.
+
+### 0.0.194
+- App updated; bundle renamed (`index-dYV4RxYk.js` / `index-CjCPuboV.css`).
+- **29 of the 83 selectors disappeared from the bundle** - the app removed /
+  restructured a batch of surfaces (artifacts panel, profile survey, search
+  modal, thread-detail title, plan-action, run-answer, tool-plan, msg-verdict-note,
+  sidebar-thread-title, threads-row-title-text, search-result-text/title,
+  fb-skeleton-answer, prompt-rail-preview, domain-explanation, export-thread-body,
+  composer-attachment menu/options, preview-context-text, fb-skeleton-conversation,
+  and the placement sidebar card). They are gone from BOTH the CSS and the JS,
+  so the corresponding RTL rules are no-ops now. Per the documented procedure
+  (see `docs/UPDATE_CHECKLIST.md`) they were **dropped from the patch rather
+  than left as stale entries** - the JS SELECTOR array went from 83 to 54
+  entries and the CSS lost the `fb-skeleton-conversation` width rule and the
+  `.placement-sidebar-card` hide rule. Health check is 54/54, exit 0.
+- **One structural dependency gone**: `.placement-sidebar-card` (an ad slot)
+  no longer exists in the bundle - confirmed by a flattened substring search of
+  both the CSS and the JS (0 hits). The other 17 of 18 dependencies are intact.
+  The ad-hiding harness (`tools/verify_ads_hidden.py`) was updated to target the
+  3 surviving ad surfaces; its scope guard (`.sponsor-intermission` must stay
+  visible) still passes.
+- **Two candidate renames, left unverified**: `plan-action` -> `plan-actions`
+  and the `composer-attachment-*` family -> `composer-preview-contexts`. Both new
+  names appear only in the CSS (0 hits in the JS), so it is not yet clear they
+  are the same surfaces carrying Persian text - they are recorded here for a
+  future screenshot-driven re-derivation rather than guessed at. No coverage is
+  lost in the meantime because the old surfaces are gone.
+- Text-surface scan (`tools/scan_text_surfaces.py`): the 0.0.194 bundle renders far fewer
+  literal `className`/`children` pairs (13 `className` occurrences in the whole
+  bundle), so the scan now reports 1 uncovered text-bearing class, **0 carrying
+  Arabic-script text** - same signal as 0.0.190/0.0.192 (no new Persian
+  surface to cover), just a much smaller denominator. No new Persian surface to
+  cover.
+- All three acceptance harnesses re-run against the new bundle and passing:
+  - `verify_ads_hidden.py` - 3 ad surfaces hidden; `.sponsor-intermission`
+    scope guard still visible (`flex 1x849` both).
+  - `verify_break_autocontinue.py` - 0 clicks while disabled, exactly 1 once
+    enabled, no repeats, a fresh break picked up.
+  - `verify_chat_width.py` - 16/16 geometry rows, pixel cross-check
+    704 -> 1177px (unchanged from 0.0.192).
+- A fresh `index.html.fb-persian-backup` was written (the update wiped `ui/`);
+  tags landed on lines 217-218 with the `/assets/` prefix.

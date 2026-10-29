@@ -323,7 +323,6 @@ checked for a modal role and for their own dismiss control:
 | `.sponsored-ad.ad-banner` | `className: \`sponsored-ad ad-${t}\`` | No modal role, no dismiss of its own. |
 | `.ad-showcase` | the large sponsor card | No modal role. |
 | `.sponsored-proposal` | `<section aria-label="Sponsored proposal">` | Has its own Minimize/Dismiss; not a modal. |
-| `.placement-sidebar-card` | the sidebar placement | Has its own dismiss. |
 
 Class names here are built at runtime, which is why grepping the bundle for the
 literal `"ad-banner"` finds only the app's telemetry selector, never a

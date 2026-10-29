@@ -181,3 +181,33 @@ Its needle set is a maintained list, so a needle that is wrong shows up
 immediately rather than being rewritten each release: `--project-sidebar` was
 such a needle (the app has the class `.project-sidebar`, not that property) and
 the first 0.0.192 run reported it MISSING before the needle was corrected.
+### 0.0.194 - 29 selectors dropped, one ad slot gone, two candidate renames
+
+0.0.194 removed or restructured 29 of the 83 surfaces the patch covered
+(artifacts panel, profile survey, search modal, thread-detail title, plan-action,
+run-answer, tool-plan, msg-verdict-note, sidebar-thread-title,
+threads-row-title-text, search-result-text/title, fb-skeleton-answer,
+prompt-rail-preview, domain-explanation, export-thread-body, composer-attachment
+menu/options, preview-context-text, fb-skeleton-conversation, and the placement
+sidebar card). All 29 are gone from BOTH the CSS and the JS, so the rules were
+no-ops. Per the "If a surface disappears" rule they were dropped from the patch
+(JS SELECTOR array 83 -> 54, plus the `fb-skeleton-conversation` width rule and
+the `.placement-sidebar-card` hide rule) only after recording them in
+FINDINGS.md - the health check is 54/54.
+
+One structural dependency is gone: `.placement-sidebar-card` (an ad slot)
+returns 0 hits in a flattened search of both bundles. The other 17 of 18 are
+intact. `tools/verify_ads_hidden.py` was updated to target the 3 surviving ad
+surfaces; its `.sponsor-intermission` scope guard still passes.
+
+Two possible renames were left UNVERIFIED and are recorded in FINDINGS.md for a
+future screenshot-driven re-derivation rather than guessed at:
+- `plan-action` -> `plan-actions`
+- `composer-attachment-*` -> `composer-preview-contexts`
+
+Both new names appear only in the CSS (0 hits in the JS), so it is not yet
+clear they are the same surfaces carrying Persian text. No coverage is lost
+because the old surfaces are gone.
+
+The text-surface scan reports 517 uncovered classes, 0 carrying Arabic-script
+text - identical to 0.0.190/0.0.192. No new Persian surface to cover.

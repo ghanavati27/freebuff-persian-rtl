@@ -166,13 +166,6 @@ samp:dir(rtl),
   max-width: none;
 }
 
-/* The loading skeleton mirrors the transcript column, so it follows the same
-   cap - otherwise the column visibly jumps in width when the transcript
-   arrives. */
-.fb-skeleton-conversation {
-  max-width: min(100%, 1200px);
-}
-
 /* ---------------------------------------------------------------------------
    6) Ad surfaces hidden.  *** APPEARANCE - NOT RTL-gated. ***
 
@@ -193,7 +186,6 @@ samp:dir(rtl),
      .ad-showcase              the large sponsor card. Safe.
      .sponsored-proposal       <section aria-label="Sponsored proposal">, with
                                its own Minimize/Dismiss. NOT a modal. Safe.
-     .placement-sidebar-card   the sidebar placement, with its own dismiss. Safe.
 
    DELIBERATELY NOT HIDDEN: .sponsor-intermission. It is a BLOCKING modal
    (role="dialog" aria-modal="true", aria-label="Sponsored break") whose only
@@ -214,7 +206,6 @@ samp:dir(rtl),
    --------------------------------------------------------------------------- */
 .sponsored-ad.ad-banner,
 .ad-showcase,
-.sponsored-proposal,
-.placement-sidebar-card {
+.sponsored-proposal {
   display: none !important;
 }
