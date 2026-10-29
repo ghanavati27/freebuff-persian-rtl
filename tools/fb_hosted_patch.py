@@ -74,8 +74,8 @@ def build_preload(original: str) -> str:
     js = open(js_path, encoding="utf-8").read()
     fonts = []
     for weight in (400, 500, 700):
-        p = os.path.join(REPO, "patch", "fb-vazirmatn-%d.woff2" % weight)
-        fonts.append(json.dumps({"w": weight, "b": font_data_uri(p)}))
+        fp = os.path.join(REPO, "patch", "fb-vazirmatn-%d.woff2" % weight)
+        fonts.append(json.dumps({"w": weight, "b": font_data_uri(fp)}))
     debug = ""
     if os.environ.get("FB_DEBUG_DOM"):
         debug = ("try { var msg=null;setInterval(function(){ if(msg)return;"
