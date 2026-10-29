@@ -98,6 +98,23 @@ Two halves, both in `patch/`:
 | `fb-persian-rtl.css` | Adds the Persian webfont (scoped to Arabic-script code points) and a handful of `:dir(rtl)`-keyed geometry rules. |
 | `fb-vazirmatn-{400,500,700}.woff2` | The font (SIL Open Font License 1.1). |
 
+**Delivery (0.0.194 and later).** The chat is no longer rendered from `ui/`:
+that directory is only the splash / sign-in shell. After sign-in the app opens
+the hosted web app (`freebuff.com` or a staging origin) in its own BrowserWindow
+with `electron/hosted-preload.cjs` as the preload. The patch therefore injects
+into that preload instead of editing local files:
+
+- `tools/fb_hosted_patch.py` sets the `unpacked` flag on that one asar entry
+  (the header is rewritten in place; the 29 MB data block is byte-identical, so
+  no offset moves) and writes
+  `resources/app.asar.unpacked/electron/hosted-preload.cjs`.
+- That file is the original preload plus an addon that calls
+  `webFrame.insertCSS(css)`, registers the Vazirmatn faces through the
+  `FontFace` API (binary source, so the page's CSP cannot block a font fetch),
+  and runs the same `dir="auto"` marker.
+- Rollback: `python tools/fb_hosted_patch.py --restore` (restores `app.asar`
+  from `app.asar.fb-orig` and deletes the unpacked directory).
+
 Why `dir="auto"` and not CSS: CSS cannot ask "is this element's content
 RTL?", so it cannot move a checkbox to the right for a Persian option while
 leaving an English row alone. `dir="auto"` can - the element derives its own
@@ -127,13 +144,18 @@ docs/UPDATE_CHECKLIST.md     the re-derivation procedure after an app update
 
 ## 6. Re-applying after a Freebuff update
 
-An update replaces the whole `ui/` directory, so the patch is gone. The user
-runs this by hand - **no scheduled task**:
+An update replaces `resources/app.asar` (and `ui/`), so the patch is gone. The
+user runs this by hand - **no scheduled task**:
 
 ```bat
 cd <this repo>
-python apply_fb_persian_patch.py
+python tools\fb_hosted_patch.py
 ```
+
+That is the installer for 0.0.194 and later: it re-marks the hosted preload in
+the new asar and rewrites the unpacked preload with the current `patch/` files.
+`apply_fb_persian_patch.py` still works for the local UI (and keeps the legacy
+`ui/` copy consistent), but on its own it does not reach the chat.
 
 Then restart Freebuff Desktop.
 
@@ -287,11 +309,13 @@ Two rules apply to anything in this category:
 
 For the chat width specifically:
 
-- The shipped UI caps the transcript with one custom property,
-  `--chat-content-max-width: 720px`, defined in the app's own `:root` next to
-  `--explorer-width`. Every consumer wraps it in `min()`/`calc()` against `100%`
-  (the live centre column), so overriding the single property is enough - and it
-  is enough *responsively*, with no media query and no JS.
+- The shipped UI caps the transcript with one custom property. The local shell
+  calls it `--chat-content-max-width: 720px`; the hosted web app calls the same
+  cap `--dk-chat-content-max-width: 720px`. Both are overridden (with
+  `!important`, because the hosted app's stylesheet can land after the injected
+  one). Every consumer wraps the value in `min()`/`calc()` against `100%` (the
+  live centre column), so overriding the property is enough - and it is enough
+  *responsively*, with no media query and no JS.
 - `.prose` carries its own `max-width: 860px; margin: 0 auto`, which would
   re-centre the text inside a widened column and put the gap back, so the
   transcript's copy is uncapped. The file-preview variant
@@ -302,7 +326,14 @@ For the chat width specifically:
   0-pixel LTR regression test still applies to sections 1-4; it cannot apply to
   a change that is meant to be visible.
 
-### 11.2 Ad surfaces (section 6)
+### 11.2 Ad surfaces: NOT hidden (section 6 removed)
+
+The ad-hiding section was **removed in 0.0.194**. The hosted app detects a
+hidden or collapsed ad slot and shows a blocking "Please allow ads on Freebuff"
+banner; a `display:none` hide was caught, and so was a 1px-high, transparent
+box. Evading the detector is a cat-and-mouse game that risks the account, so the
+patch leaves the ad slots untouched. The notes below are kept for the history
+and as a warning for anyone who tries again.
 
 **Before hiding any surface, check whether it can trap the user.** That is the
 whole risk in this section, and it is not obvious from the class name.

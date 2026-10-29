@@ -456,3 +456,54 @@ The tools now name this explicitly instead of printing a bare module error, and
     704 -> 1177px (unchanged from 0.0.192).
 - A fresh `index.html.fb-persian-backup` was written (the update wiped `ui/`);
   tags landed on lines 217-218 with the `/assets/` prefix.
+
+### 0.0.194 follow-up — the chat moved to a hosted web app (patch delivery changed)
+
+This release is the one where the local-file patch stopped working, and the
+reason was not a renamed selector.
+
+- `resources/orchestrator/ui/` is now only the splash / sign-in shell. Its
+  bundle contains none of the chat classes (`prose`, `composer`, `reasoning`,
+  `user-message`, `markdown` all count 0 in the JS), while the stylesheet still
+  carries them.
+- The chat is the hosted web app, opened in its own BrowserWindow:
+  `electron/hosted-workspace.cjs` has
+  `HOSTED_ORIGINS = ['https://staging-2-auth.freebuffweb.site',
+  'https://staging-auth.freebuff.com', 'https://freebuff.com']` and
+  `win.loadURL(bootstrap.url)`; the partition
+  `%APPDATA%/Freebuff/Partitions/freebuff-hosted-v1-*` is created on first use.
+- So a green `54/54 selectors` check was meaningless: it matched classes in the
+  local stylesheet that the chat window never loads.
+
+**New delivery.** `tools/fb_hosted_patch.py` marks `electron/hosted-preload.cjs`
+as `unpacked` in the asar header (data block untouched) and writes an unpacked
+preload that injects the patch into the hosted page:
+
+- `webFrame.insertCSS(css)` for the stylesheet.
+- `document.fonts.add(new FontFace('Vazirmatn FB', <binary>, { unicodeRange }))`
+  for the font, so the page's CSP cannot block a font fetch and Latin text keeps
+  its original face.
+- The existing `dir="auto"` marker runs unchanged.
+
+Attendance evidence: with a temporary title marker the hosted window reported
+`FB-RTL n=110`, i.e. the preload ran and 110 elements were marked. Measured on a
+screenshot afterwards: right-edge spread 52 px against left-edge spread 319 px
+(right-aligned), where the unpatched control was 111 px / 256 px.
+
+**Chat width.** The hosted app names the cap `--dk-chat-content-max-width: 720px`
+(the local shell uses the unprefixed name). The patch now overrides both, with
+`!important`, plus `.messages .prose { max-width: none !important }`. Measured:
+text spans ~999 px of a 1050 px pane, versus ~720 px before.
+
+**Ads are NOT hidden any more.** The hosted app detects a hidden ad slot and
+shows a blocking "Please allow ads on Freebuff" banner. `display:none` was
+caught, and so was a 1 px-high, transparent box; section 6 was therefore removed
+and the ad slots left alone. That is the honest trade: about 50 px of banner in
+exchange for not fighting a detector that risks the account.
+
+**To-dos are unreachable in hosted mode.** `orchestrator.js` builds its tool
+list as `...(options.workspace ? [] : ["write_todos"])`, so the workspace agent
+never gets the todo tool, and the Claude path has
+`CLAUDE_DISALLOWED_TOOLS = ["TodoWrite"]`. The `.todo-dock` styles still exist in
+the stylesheet, but no tool call can produce one; the model can only write a
+Markdown checklist. Do not chase dock selectors for this mode.

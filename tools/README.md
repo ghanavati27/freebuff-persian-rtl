@@ -213,3 +213,23 @@ Known-good invocation:
 
 Note `apply_fb_persian_patch.py` has no such requirement - it is stdlib only, so
 the default `python` is fine for applying and health-checking the patch.
+
+## `tools/fb_hosted_patch.py` (0.0.194+)
+
+The chat is a hosted web app; `ui/` is only the splash. This script moves the
+patch into the hosted window's preload:
+
+```bat
+python tools\fb_hosted_patch.py           # apply / re-apply
+python tools\fb_hosted_patch.py --check   # report, change nothing
+python tools\fb_hosted_patch.py --restore # rollback
+```
+
+It sets the `unpacked` flag on `electron/hosted-preload.cjs` in `app.asar` and
+writes the unpacked copy with the CSS, the Vazirmatn faces (via the `FontFace`
+API) and the `dir="auto"` marker appended. `tools/fb_asar.py` is the minimal
+asar reader/writer it uses; offsets stay untouched because the data block is
+copied byte-for-byte.
+
+`apply_fb_persian_patch.py` still installs the legacy `ui/` copy and remains the
+health checker for the selector list, but on its own it cannot reach the chat.

@@ -211,3 +211,35 @@ because the old surfaces are gone.
 
 The text-surface scan reports 517 uncovered classes, 0 carrying Arabic-script
 text - identical to 0.0.190/0.0.192. No new Persian surface to cover.
+
+## 0.0.194 follow-up — the chat is a hosted web app, not `ui/`
+
+An update now replaces `resources/app.asar`, and the chat is loaded from a
+remote origin in a separate BrowserWindow. Re-apply with the hosted installer,
+not the local one:
+
+```bat
+python tools\fb_hosted_patch.py
+```
+
+What it does, in order:
+
+1. Reads `electron/hosted-preload.cjs` out of `app.asar` and keeps
+   `app.asar.fb-orig` as the rollback copy.
+2. Sets `"unpacked": true` on that single header entry. Offsets are relative to
+   the data block, and the data block is copied unchanged, so nothing shifts.
+3. Writes `app.asar.unpacked/electron/hosted-preload.cjs` = original preload +
+   the injection block built from `patch/fb-persian-rtl.css` and
+   `patch/fb-persian-rtl.js`.
+
+Then launch the app and confirm the hosted window opens. `--restore` puts the
+original asar back and deletes the unpacked directory.
+
+Two environment traps seen while doing this:
+
+- The app refuses `--remote-debugging-port` (`app.exit(1)` in `main.cjs`), and
+  the fuses keep `--inspect` / `NODE_OPTIONS --require` from being useful.
+  Do not plan on DevTools injection.
+- Opening the hosted window sometimes fails with
+  `unknown certificate verification error` (status 400/409). That is the app's
+  local broker, not the patch; one restart fixes it.
