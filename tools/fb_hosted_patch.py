@@ -105,18 +105,25 @@ def build_preload(original: str) -> str:
       }
     }
     function run() {
-      try { webFrame.insertCSS(CSS) } catch (e) {}
+      try { webFrame.insertCSS(CSS, { cssOrigin: 'user' }) } catch (e) { try { webFrame.insertCSS(CSS) } catch (e2) {} }
       addFonts()
       try { %s } catch (e) {}
       %s
+      try { (function(){function pad(root){try{if(!root||root.nodeType!==1)return;var hit=[];if(root.matches&&root.matches(".msg"))hit.push(root);var l=root.querySelectorAll?root.querySelectorAll(".msg"):[];for(var i=0;i<l.length;i++)hit.push(l[i]);for(var j=0;j<hit.length;j++){var el=hit[j];if(el.dataset&&el.dataset.fbPad)continue;el.style.marginRight="24px";if(el.dataset)el.dataset.fbPad="1";}}catch(e){}}pad(document.documentElement);new MutationObserver(function(rs){for(var r=0;r<rs.length;r++){var a=rs[r].addedNodes;for(var n=0;n<a.length;n++)pad(a[n]);}}).observe(document.documentElement,{childList:true,subtree:true});})() } catch (e) {}
     }
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run, { once: true })
     else run()
   } catch (e) {}
 })()
 """ % (json.dumps(css), ",".join(fonts), js,
-       "try { document.title='FB-PRELOAD'; setInterval(function(){ document.title = 'FB-RTL n=' + document.querySelectorAll('[dir=auto]').length }, 700) } catch (e) {}"
-       if os.environ.get("FB_DEBUG_TITLE") else "")
+       ("try { var msg=null;setInterval(function(){ if(msg)return;"
+        "var out=[];document.querySelectorAll('div,section,article,ul,ol').forEach(function(d){"
+        "var r=d.getBoundingClientRect();"
+        "if(r.width>700&&r.height<=5&&r.top>60&&out.length<3){out.push((d.className||d.tagName)+'');}});"
+        "if(!out.length)return;"
+        "msg='FBDBG thin='+out.length+' '+out.join(' | ').slice(0,170);"
+        "setInterval(function(){document.title=msg},700);},1500); } catch (e) {}"
+        if os.environ.get("FB_DEBUG_DOM") else ""))
     return original + addon
 
 
