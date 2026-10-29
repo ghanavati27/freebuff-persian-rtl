@@ -77,10 +77,15 @@ def build_preload(original: str) -> str:
         p = os.path.join(REPO, "patch", "fb-vazirmatn-%d.woff2" % weight)
         fonts.append(json.dumps({"w": weight, "b": font_data_uri(p)}))
     debug = ""
-    if os.environ.get("FB_DEBUG_TITLE"):
-        debug = ("try { document.title='FB-PRELOAD';"
-                 " setInterval(function(){ document.title = 'FB-RTL n=' +"
-                 " document.querySelectorAll('[dir=auto]').length }, 700) } catch (e) {}")
+    if os.environ.get("FB_DEBUG_DOM"):
+        debug = ("try { var msg=null;setInterval(function(){ if(msg)return;"
+                 "var cs=document.querySelector('.composer-input-scroll');if(!cs)return;"
+                 "var tb=document.querySelector('.thread-body');var pin=tb?tb.style.width:'-',pc=tb?Math.round(tb.getBoundingClientRect().width):0,pp=tb&&tb.parentElement?Math.round(tb.parentElement.getBoundingClientRect().width):0;var out=['TB:'+pin+'/'+pc+'/p'+pp],e=cs;for(var k=0;k<5&&e&&e!==document.body;k++){"
+                 "var r=e.getBoundingClientRect();"
+                 "out.push(((e.className||e.tagName)+'').slice(0,34)+'@'+Math.round(r.width));"
+                 "e=e.parentElement;}"
+                 "msg='FBDBG '+out.join(' < ').slice(0,190);"
+                 "setInterval(function(){document.title=msg},700);},2000); } catch (e) {}")
     addon = """
 // ---- fb-persian-rtl: injected into the hosted workspace ----
 ;(function () {
@@ -131,8 +136,39 @@ def build_preload(original: str) -> str:
               var cs=t.querySelectorAll('th,td');
               for(var m=0;m<cs.length;m++)cs[m].style.textAlign='right';}
             if(t.dataset)t.dataset.fbTbl='1';}}catch(e){}}
-        function apply(root){pad(root);fixT(root);}
+        function setW(){try{var r=document.documentElement;r.style.setProperty('--dk-chat-content-max-width','1200px');r.style.setProperty('--chat-content-max-width','1200px');}catch(e){}}function widen(){try{var els=document.querySelectorAll('div,section,article');for(var i=0;i<els.length;i++){var el=els[i];if(el.classList&&el.classList.contains('workspace-transcript-content')){el.style.width='100%%';el.style.maxWidth='1200px';el.style.marginLeft='auto';el.style.marginRight='auto';}var mw=getComputedStyle(el).maxWidth;if(!mw||mw.slice(-2)!=='px')continue;var v=parseFloat(mw);if(v>=700&&v<=900&&el.clientWidth>500)el.style.maxWidth='1200px';}}catch(e){}}function lca(a,b){var s=new Set();for(var e=a;e;e=e.parentElement)s.add(e);for(var e=b;e;e=e.parentElement)if(s.has(e))return e;return null;}
+        function layout(){try{
+          var t=document.querySelector('.workspace-transcript-content');
+          var ci=document.querySelector('.composer-input-scroll');
+          var bx=document.querySelector('.composer-box');
+          if(ci){
+            var e=bx||ci;
+            while(e&&e!==document.body){
+              var w=e.getBoundingClientRect().width;
+              if(w>=900)break;
+              e.style.width='100%%';e.style.maxWidth='1200px';
+              e.style.marginLeft='auto';e.style.marginRight='auto';
+              e=e.parentElement;}
+            ci.style.width='100%%';
+          }
+          if(t){
+            t.style.width='100%%';t.style.maxWidth='1200px';
+            t.style.marginLeft='auto';t.style.marginRight='auto';
+          }
+          if(t&&ci){
+            var p=lca(t,ci);
+            if(p&&p!==document.body){p.style.paddingLeft='24px';p.style.paddingRight='24px';}
+            var c=ci;while(c&&c.parentElement!==p)c=c.parentElement;
+            var cols=[t];if(c&&c!==p)cols.push(c);
+            for(var i=0;i<cols.length;i++){var el=cols[i];
+              el.style.width='100%%';el.style.maxWidth='1200px';
+              el.style.marginLeft='auto';el.style.marginRight='auto';}
+          }
+        }catch(e){}}
+        function apply(root){pad(root);fixT(root);setW();}
         apply(document.documentElement);
+        widen();
+        var n=0,iv=setInterval(function(){widen();layout();},1200);
         new MutationObserver(function(rs){for(var r=0;r<rs.length;r++){
           var a=rs[r].addedNodes;for(var n=0;n<a.length;n++)apply(a[n]);}
         }).observe(document.documentElement,{childList:true,subtree:true});

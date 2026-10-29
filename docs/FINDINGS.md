@@ -64,3 +64,21 @@ The direction work only ever worked because it is JavaScript.
 - `.prose` and `<hr>` do not exist in the hosted chat; it uses `.msg` blocks and
   Tailwind classes. Selectors written for the old local UI silently match
   nothing.
+
+## Width, composer and side gaps (JS)
+
+- The transcript container is `.workspace-transcript-content`. It carries a hard
+  `width: 720px` with `max-width: none`, so overriding
+  `--dk-chat-content-max-width` changed nothing at all.
+- The composer is a separate column: `.composer-input-scroll` < `.composer-box` <
+  `.composer.workspace-composer` < `.thread-bottom` < `.thread-body`, all 610 px
+  wide before the fix. Widening the transcript does not touch it.
+- The patch now sets `width: 100%` + `max-width: 1200px` + auto margins on the
+  transcript, and climbs from `.composer-box` to the first ancestor at least
+  900 px wide, widening each step on the way. A 24 px left/right padding on the
+  lowest common ancestor of transcript and composer gives the gap from the
+  sidebar and the same gap on the right.
+- Measured on 1364x718: composer input 552 -> 992 px, `.thread-body`
+  610 -> 1050 px, content gap 25 px on the left and ~30 px on the right.
+- The styles are re-applied every 1.2 s: React re-renders the composer subtree
+  and drops inline styles, so a one-shot write does not survive.

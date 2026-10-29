@@ -32,7 +32,10 @@ patch never ships CSS. Everything is done through the DOM / CSSOM:
 
 - `dir="auto"` on text-bearing elements (via `patch/fb-persian-rtl.js`).
 - Vazirmatn registered through the `FontFace` API, scoped by `unicode-range`.
-- 24 px right gutter on transcript blocks (`.msg`), matching the left gap.
+- Chat column widened to 1200 px and the composer matched to it, with a
+  24 px gap on each side (JS: the transcript is hard-coded to 720 px and the
+  composer lives in its own 610 px column).
+- 24 px right gutter on transcript blocks (`.msg`).
 - Persian-dominant tables: `direction: rtl` plus right-aligned `th` / `td`.
 - The sponsored break is auto-continued once its button enables.
 
