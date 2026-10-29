@@ -507,3 +507,24 @@ never gets the todo tool, and the Claude path has
 `CLAUDE_DISALLOWED_TOOLS = ["TodoWrite"]`. The `.todo-dock` styles still exist in
 the stylesheet, but no tool call can produce one; the model can only write a
 Markdown checklist. Do not chase dock selectors for this mode.
+
+### CSS does not apply in the hosted window (CSP) - do layout in JS
+
+Measured with a temporary probe: `webFrame.insertCSS(css)` (author and
+`cssOrigin:'user'`) returns without throwing yet changes nothing, and a
+`<style>` element appended to the document is parsed but its rules are blocked.
+The hosted page's CSP rejects both, so **every CSS rule in `patch/` is a no-op
+there**; the direction work only ever worked because it is JavaScript.
+
+Two consequences, both now handled in the preload's JS:
+
+- Right gutter: the chat pane is flush with the window edge, so the transcript
+  separators ran into the frame with no gap (the sidebar gives the left side
+  one). `.msg` blocks now get `style.marginRight = '24px'` through CSSOM.
+- Tables: the old `.prose table:dir(rtl) th/td { text-align: start }` never ran.
+  Tables whose text is Persian-dominant (`fa > 0 && fa*2 >= la`) now get
+  `style.direction='rtl'` plus `textAlign='right'` on every `th`/`td`; Latin
+  tables are left alone.
+
+Any future visual change must go through CSSOM or DOM attributes, not the
+stylesheet, unless the page CSP changes.
