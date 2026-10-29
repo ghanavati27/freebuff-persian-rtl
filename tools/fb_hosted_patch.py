@@ -63,27 +63,28 @@ def font_data_uri(path: str) -> str:
 
 
 def build_preload(original: str) -> str:
-    css_path = os.path.join(REPO, "patch", "fb-persian-rtl.css")
+    """Original preload + the JS-only injection for the hosted page.
+
+    No CSS: the hosted page's CSP rejects `insertCSS` (author and user origin)
+    and injected <style> elements, so every stylesheet rule is a silent no-op
+    there. Direction, font, gutter and table alignment are all done through
+    the DOM / CSSOM instead.
+    """
     js_path = os.path.join(REPO, "patch", "fb-persian-rtl.js")
-    css = open(css_path, encoding="utf-8").read()
-    # fonts are added through the FontFace API (binary source, no CSP fetch)
-    css = re.sub(r"@font-face\s*\{[^}]*\}\s*", "", css)
-    for weight in (400, 500, 700):
-        css = css.replace(
-            'url("./fb-vazirmatn-%d.woff2")' % weight,
-            "url(%s)" % font_data_uri(os.path.join(REPO, "patch", "fb-vazirmatn-%d.woff2" % weight)),
-        )
     js = open(js_path, encoding="utf-8").read()
     fonts = []
     for weight in (400, 500, 700):
         p = os.path.join(REPO, "patch", "fb-vazirmatn-%d.woff2" % weight)
         fonts.append(json.dumps({"w": weight, "b": font_data_uri(p)}))
+    debug = ""
+    if os.environ.get("FB_DEBUG_TITLE"):
+        debug = ("try { document.title='FB-PRELOAD';"
+                 " setInterval(function(){ document.title = 'FB-RTL n=' +"
+                 " document.querySelectorAll('[dir=auto]').length }, 700) } catch (e) {}")
     addon = """
 // ---- fb-persian-rtl: injected into the hosted workspace ----
 ;(function () {
   try {
-    var webFrame = require('electron').webFrame
-    var CSS = %s
     var FONTS = [%s]
     var marked = false
     function b64(uri) {
@@ -105,25 +106,43 @@ def build_preload(original: str) -> str:
       }
     }
     function run() {
-      try { webFrame.insertCSS(CSS, { cssOrigin: 'user' }) } catch (e) { try { webFrame.insertCSS(CSS) } catch (e2) {} }
       addFonts()
       try { %s } catch (e) {}
       %s
-      try { (function(){function pad(root){try{if(!root||root.nodeType!==1)return;var hit=[];if(root.matches&&root.matches(".msg"))hit.push(root);var l=root.querySelectorAll?root.querySelectorAll(".msg"):[];for(var i=0;i<l.length;i++)hit.push(l[i]);for(var j=0;j<hit.length;j++){var el=hit[j];if(el.dataset&&el.dataset.fbPad)continue;el.style.marginRight="24px";if(el.dataset)el.dataset.fbPad="1";}}catch(e){}}function fixT(root){try{if(!root||root.nodeType!==1)return;var ts=[];if(root.matches&&root.matches("table"))ts.push(root);var l=root.querySelectorAll?root.querySelectorAll("table"):[];for(var i=0;i<l.length;i++)ts.push(l[i]);for(var j=0;j<ts.length;j++){var t=ts[j];if(t.dataset&&t.dataset.fbTbl)continue;var s=t.innerText||"",fa=0,la=0;for(var k=0;k<s.length;k++){var c=s.charCodeAt(k);if(c>=1536&&c<=1791)fa++;else if((c>=65&&c<=90)||(c>=97&&c<=122))la++;}if(fa>0&&fa*2>=la){t.style.direction="rtl";t.setAttribute("dir","rtl");var cs=t.querySelectorAll("th,td");for(var m=0;m<cs.length;m++)cs[m].style.textAlign="right";}if(t.dataset)t.dataset.fbTbl="1";}}catch(e){}}function run(root){pad(root);fixT(root);}run(document.documentElement);new MutationObserver(function(rs){for(var r=0;r<rs.length;r++){var a=rs[r].addedNodes;for(var n=0;n<a.length;n++)run(a[n]);}}).observe(document.documentElement,{childList:true,subtree:true});})() } catch (e) {}
+      try { (function(){
+        function pad(root){try{if(!root||root.nodeType!==1)return;var hit=[];
+          if(root.matches&&root.matches('.msg'))hit.push(root);
+          var l=root.querySelectorAll?root.querySelectorAll('.msg'):[];
+          for(var i=0;i<l.length;i++)hit.push(l[i]);
+          for(var j=0;j<hit.length;j++){var el=hit[j];
+            if(el.dataset&&el.dataset.fbPad)continue;
+            el.style.marginRight='24px';
+            if(el.dataset)el.dataset.fbPad='1';}}catch(e){}}
+        function fixT(root){try{if(!root||root.nodeType!==1)return;var ts=[];
+          if(root.matches&&root.matches('table'))ts.push(root);
+          var l=root.querySelectorAll?root.querySelectorAll('table'):[];
+          for(var i=0;i<l.length;i++)ts.push(l[i]);
+          for(var j=0;j<ts.length;j++){var t=ts[j];
+            if(t.dataset&&t.dataset.fbTbl)continue;
+            var s=t.innerText||'',fa=0,la=0;
+            for(var k=0;k<s.length;k++){var c=s.charCodeAt(k);
+              if(c>=1536&&c<=1791)fa++;else if((c>=65&&c<=90)||(c>=97&&c<=122))la++;}
+            if(fa>0&&fa*2>=la){t.style.direction='rtl';t.setAttribute('dir','rtl');
+              var cs=t.querySelectorAll('th,td');
+              for(var m=0;m<cs.length;m++)cs[m].style.textAlign='right';}
+            if(t.dataset)t.dataset.fbTbl='1';}}catch(e){}}
+        function apply(root){pad(root);fixT(root);}
+        apply(document.documentElement);
+        new MutationObserver(function(rs){for(var r=0;r<rs.length;r++){
+          var a=rs[r].addedNodes;for(var n=0;n<a.length;n++)apply(a[n]);}
+        }).observe(document.documentElement,{childList:true,subtree:true});
+      })() } catch (e) {}
     }
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run, { once: true })
     else run()
   } catch (e) {}
 })()
-""" % (json.dumps(css), ",".join(fonts), js,
-       ("try { var msg=null;setInterval(function(){ if(msg)return;"
-        "var out=[];document.querySelectorAll('div,section,article,ul,ol').forEach(function(d){"
-        "var r=d.getBoundingClientRect();"
-        "if(r.width>700&&r.height<=5&&r.top>60&&out.length<3){out.push((d.className||d.tagName)+'');}});"
-        "if(!out.length)return;"
-        "msg='FBDBG thin='+out.length+' '+out.join(' | ').slice(0,170);"
-        "setInterval(function(){document.title=msg},700);},1500); } catch (e) {}"
-        if os.environ.get("FB_DEBUG_DOM") else ""))
+""" % (",".join(fonts), js, debug)
     return original + addon
 
 
