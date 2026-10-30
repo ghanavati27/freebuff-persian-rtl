@@ -24,8 +24,9 @@ Measured with probes injected into the live window:
   author origin and `{ cssOrigin: 'user' }`, and changes nothing.
 - A `<style>` element appended by the preload is accepted by the DOM
   (`style ok`) but its rules never apply.
-- Therefore every stylesheet in this repo was a silent no-op in the hosted
-  window, and the repo no longer ships any CSS.
+- Therefore every stylesheet is a silent no-op in the hosted window. The repo
+  keeps `patch/fb-persian-rtl.css` only for the local UI path (Freebuff 0.0.192
+  and older), where the renderer has no CSP.
 
 The direction work only ever worked because it is JavaScript.
 

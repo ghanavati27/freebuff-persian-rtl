@@ -5,31 +5,33 @@ Guidance for AI coding agents working on this repository.
 ## 1. What this repo is
 
 A runtime patch that makes Persian / Arabic render correctly in **Freebuff
-Desktop 0.0.194 and later**.
+Desktop**. There are two delivery paths; the app version decides which one is
+live:
 
-Since 0.0.194 the chat is **not** local: `resources/orchestrator/ui/` is the
-splash / sign-in shell only, and the real UI is the hosted web app
-(`freebuff.com` or a staging origin) opened in its own `BrowserWindow` with
-`electron/hosted-preload.cjs`. The patch lives in that preload.
+| Freebuff Desktop | Chat UI | Installer | Styling |
+|---|---|---|---|
+| 0.0.192 and older | local `resources/orchestrator/ui/` | `apply_fb_persian_patch.py` | CSS works |
+| 0.0.194 and newer | hosted web app window | `tools/fb_hosted_patch.py` | JS/CSSOM only |
 
-There is nothing to build and nothing to fork.
+Always check the version first (`python apply_fb_persian_patch.py --check`
+prints it). Running the wrong installer does nothing useful: 0.0.194+ never
+loads `ui/` for the chat, and 0.0.192 has no `hosted-preload`.
 
 ## 2. Hard constraints
 
-1. **No CSS. The hosted page's CSP rejects it.** Measured: `webFrame.insertCSS`
-   (author and `cssOrigin:'user'`) returns without throwing and changes nothing,
-   and an injected `<style>` element is parsed but its rules never apply. Any
-   visual change must be made through DOM attributes or CSSOM
-   (`element.style.x = ...`), which CSP does not block.
+1. **CSS only works in the local UI.** The hosted page's CSP rejects
+   `webFrame.insertCSS` (author and `cssOrigin:'user'`) and injected `<style>`
+   elements - measured, silent no-ops. On 0.0.194+ every visual change must go
+   through DOM attributes or CSSOM (`element.style.x = ...`). Do not add a
+   stylesheet to the hosted path.
 2. **Never touch `display` / visibility of ad slots.** The app detects hidden or
    collapsed ads and blocks with a "Please allow ads" banner; `display:none`
    and a 1 px transparent box were both caught. Ads stay as shipped.
 3. **An LTR user must see the shipped layout.** `dir="auto"` on Latin content
    resolves to `ltr`; the font is scoped with `unicode-range`. The layout
-   overrides (1200 px column, 24 px side gaps) are deliberate and approved.
+   overrides (1200 px column, 30 px side gaps) are deliberate and approved.
 4. **Code stays left-to-right.** Never mirror code, terminals, diffs or paths.
-5. **No scheduled task.** The user runs `tools/fb_hosted_patch.py` by hand after
-   each update.
+5. **No scheduled task.** The user runs the installer by hand after each update.
 6. **Verify by measurement, not by eye.** Pixel measurement (Pillow) or a live
    DOM probe (below) is the only accepted evidence.
 
@@ -38,12 +40,22 @@ There is nothing to build and nothing to fork.
 | What | Where |
 |---|---|
 | Install root | `%LOCALAPPDATA%\Programs\@codebufffreebuff-desktop\` |
-| Chat UI | hosted web app in its own window (`hosted-workspace.cjs`) |
-| Preload patched | `resources/app.asar` -> `electron/hosted-preload.cjs` |
-| Patch sources | `patch/fb-persian-rtl.js`, `patch/*.woff2` |
-| Installer | `tools/fb_hosted_patch.py` (+ `tools/fb_asar.py`) |
+| Local UI | `resources/orchestrator/ui/` (index.html + assets) |
+| Hosted UI | hosted web app in its own window (`electron/hosted-workspace.cjs`) |
+| Shared sources | `patch/fb-persian-rtl.js`, `patch/*.woff2`, `patch/fb-persian-rtl.css` |
 
 ## 4. How the patch is delivered
+
+### Local UI (0.0.192 and older)
+
+`apply_fb_persian_patch.py` copies the CSS, the JS and the fonts into
+`resources/orchestrator/ui/assets/`, then adds `<link>` and `<script>` tags to
+`index.html` (original kept as `index.html.fb-persian-backup`). `--check`
+reports state, `--dry-run` shows the plan, `--force` re-applies. The selectors in
+`patch/fb-persian-rtl.css` must exist in the bundle; the installer verifies this
+and exits 1 when some are stale.
+
+### Hosted UI (0.0.194 and newer)
 
 `tools/fb_hosted_patch.py`:
 
@@ -73,15 +85,18 @@ Rollback: `python tools\fb_hosted_patch.py --restore`.
 
 ## 5. Re-applying after an update
 
-An update replaces `app.asar`, so the patch is gone.
+An update replaces the UI, so the patch is gone. Check the version, then run the
+matching installer and restart the app:
 
 ```bat
-python tools\fb_hosted_patch.py
+python apply_fb_persian_patch.py --check
+python apply_fb_persian_patch.py          :: 0.0.192 and older
+python tools\fb_hosted_patch.py           :: 0.0.194 and newer
 ```
 
-Then restart Freebuff. See `docs/UPDATE_CHECKLIST.md`.
+See `docs/UPDATE_CHECKLIST.md`.
 
-## 6. Live DOM probes
+## 6. Live DOM probes (hosted path)
 
 DevTools is not available: the app calls `app.exit(1)` on
 `--remote-debugging-port`, and the fuses block `--inspect` / `NODE_OPTIONS
@@ -94,22 +109,25 @@ Get-Process Freebuff | Where-Object MainWindowTitle | Select-Object -ExpandPrope
 ```
 
 This is how the 720 px transcript cap and the 610 px composer column were found.
-Remove the probe before the final build; it changes the window title.
+Remove the probe before the final build; it changes the window title. On the
+local UI this is unnecessary - the page has no CSP, so the CSS itself applies.
 
 ## 7. Verification
 
-Pixel measurement with Pillow against a screenshot of the hosted window:
-
-- Persian paragraphs: constant right edge, ragged left.
-- Tables: Persian-dominant tables right-aligned; Latin tables unchanged.
-- Chat column ~1200 px wide, composer the same width, ~24 px gaps on both sides.
-- No red "allow ads" banner (ads untouched).
+- Local UI: the installer's own check (every selector present in the bundle),
+  plus a screenshot for direction and the 1200 px column.
+- Hosted UI: pixel measurement with Pillow against a screenshot - Persian
+  paragraphs with a constant right edge and ragged left, Persian tables
+  right-aligned, chat column ~1200 px with the composer matching it, 30 px gaps,
+  and no red "allow ads" banner.
 
 ## 8. Known dead ends
 
-- **CSS** - blocked by CSP, as above. Do not reintroduce a stylesheet.
-- **Width via CSS variables** - `--dk-chat-content-max-width` has no effect: the
-  transcript is hard-coded to `width: 720px` with `max-width: none`.
+- **CSS on the hosted page** - blocked by CSP, as above. Do not add a stylesheet
+  to that path.
+- **Width via CSS variables on the hosted page** - `--dk-chat-content-max-width`
+  has no effect there: the transcript is hard-coded to `width: 720px` with
+  `max-width: none`.
 - **To-do dock** - unreachable in hosted mode: `orchestrator.js` only adds
   `write_todos` when `!options.workspace`, and the Claude path has
   `CLAUDE_DISALLOWED_TOOLS = ["TodoWrite"]`. The model can only write a

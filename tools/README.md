@@ -28,10 +28,16 @@ window show `FB-RTL n=<marked elements>` in its title.
 A minimal asar reader/writer used by the installer: parse the header, read a
 file, and repack the header while keeping the data block byte-identical.
 
+## Local UI
+
+`apply_fb_persian_patch.py` in the repo root handles Freebuff 0.0.192 and older,
+where the chat is served from `resources/orchestrator/ui/`. It installs the CSS,
+the JS and the fonts into `ui/assets/` and edits `index.html`; there the stylesheet
+does apply.
+
 ## Removed
 
 The old harnesses (`verify_chat_width.py`, `verify_ads_hidden.py`,
 `verify_break_autocontinue.py`, `measure_ink.py`, `check_dependencies.py`,
-`scan_text_surfaces.py`) and `apply_fb_persian_patch.py` targeted the local
-`ui/` renderer, which no longer hosts the chat. They were deleted rather than
-left to rot.
+`scan_text_surfaces.py`) targeted the local `ui/` markup and were deleted rather
+than left to rot.

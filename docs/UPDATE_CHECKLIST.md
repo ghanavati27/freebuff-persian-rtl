@@ -1,45 +1,61 @@
 # Re-applying after a Freebuff update
 
-An update replaces `resources/app.asar`, so the patch is gone. Run this by hand -
+An update replaces the UI files, so the patch is gone. Run the installer by hand -
 there is no scheduled task.
+
+## 1. Check the version
 
 ```bat
 cd C:\Users\Siroos\Hermes\freebuff-persian-rtl
+python apply_fb_persian_patch.py --check
+```
+
+The first lines print the `ui dir` and the installed version. That decides which
+installer to run.
+
+## 2. Run the matching installer
+
+**0.0.192 and older** - local UI served from `resources/orchestrator/ui/`:
+
+```bat
+python apply_fb_persian_patch.py
+```
+
+Copies `fb-persian-rtl.css`, `fb-persian-rtl.js` and the three fonts into
+`ui/assets/`, adds the tags to `index.html`, and verifies that every selector in
+the stylesheet still exists in the bundle. A selector mismatch means the UI
+changed: update `patch/fb-persian-rtl.css` before shipping.
+
+**0.0.194 and newer** - hosted web app window:
+
+```bat
 python tools\fb_hosted_patch.py
 ```
 
-Then restart Freebuff Desktop.
-
-## What the script does
-
-1. Copies `app.asar` to `app.asar.fb-orig` if that backup does not exist yet.
-2. Reads `electron/hosted-preload.cjs` out of the asar and sets `"unpacked": true`
-   on that one header entry. Offsets are relative to the data block, and the data
-   block is copied unchanged, so nothing shifts.
-3. Writes `app.asar.unpacked/electron/hosted-preload.cjs` = the original preload
-   plus the JS addon: Vazirmatn via `FontFace`, the `dir="auto"` marker from
-   `patch/fb-persian-rtl.js`, the 24 px `.msg` right gutter and the Persian-table
-   alignment.
-
+Marks `electron/hosted-preload.cjs` as unpacked in `app.asar` and writes a
+patched preload (JS only - the hosted page's CSP blocks stylesheets).
 Rollback: `python tools\fb_hosted_patch.py --restore`.
 
-## Check after applying
+## 3. Restart and check
 
-1. Launch the app; the hosted window must open (title "Freebuff: The free coding
-   agent", not the local "Freebuff Desktop" splash).
-2. Persian paragraphs: right-aligned.
+1. Launch Freebuff.
+2. Persian paragraphs sit on the right, Latin and code stay on the left.
 3. A Persian table: first column on the right, cells right-aligned.
-4. Transcript blocks stop before the window's right edge.
+4. The chat column is wide (~1200 px) with a visible gap on both sides.
 5. No red "Please allow ads on Freebuff" banner (the patch never touches ads).
 
 ## Traps
 
-- `--remote-debugging-port` is refused (`app.exit(1)`), and the fuses keep
-  `--inspect` / `NODE_OPTIONS --require` from being useful. Do not plan on
-  DevTools injection; use a temporary `document.title` marker from the preload if
-  you need to observe the live DOM.
-- The hosted window intermittently fails to open with
-  `unknown certificate verification error` (status 400/409). That is the app's
-  local broker; restart Freebuff.
-- Do not add CSS. The hosted page's CSP rejects `insertCSS` and injected
-  `<style>` elements, so a stylesheet is a silent no-op there. Use DOM / CSSOM.
+- **Right installer matters.** On 0.0.194+ the local `ui/` files are the splash
+  only, so `apply_fb_persian_patch.py` reports success and changes nothing you
+  can see. On 0.0.192 there is no hosted preload.
+- **Hosted window failures are usually not the patch.** `Couldn't send. Try
+  again.`, `hosted-workspace:open` timeouts and `unknown certificate
+  verification error` come from the app's own broker/network. A/B with
+  `python tools\fb_hosted_patch.py --copy-only` (original preload) tells you
+  whether the patch is involved.
+- **DevTools** is refused on the hosted build (`app.exit(1)` on
+  `--remote-debugging-port`); use the `FB_DEBUG_DOM` title probe described in
+  `AGENTS.md`.
+- **Do not add CSS to the hosted path.** `insertCSS` and injected `<style>`
+  elements are silent no-ops there.
