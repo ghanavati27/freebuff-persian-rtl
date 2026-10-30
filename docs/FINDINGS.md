@@ -99,3 +99,13 @@ same Persian/Latin ratio as the tables (`fa*2 >= la`). A block with no Persian
 characters is pinned to `ltr`. `pre`/`code`/`kbd`/`samp` are forced back to
 `direction: ltr; unicode-bidi: isolate` so code inside an RTL block is not
 mirrored. It runs with the 1.2 s tick for the same React reason.
+
+## 0.0.195: the asar header is padded
+
+The 0.0.195 build pads the JSON header to a 4-byte boundary, and the file
+offsets are relative to the padded data start - not to `16 + json_length`.
+Reading from `16 + len` made the preload begin with `")
+'use strict'`, so the
+patched preload was a syntax error. `tools/fb_asar.py` now computes
+`pad = (-(16 + header_len)) % 4` on read, and on write shifts every offset by the
+real data-block delta, iterating until the digit count stops changing.
