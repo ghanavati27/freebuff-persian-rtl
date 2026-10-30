@@ -12,6 +12,13 @@ the patch is restored in one step.
     python apply_fb_persian_patch.py --check    report state, change nothing
     python apply_fb_persian_patch.py --dry-run  show what would happen
     python apply_fb_persian_patch.py --force    re-apply even if already present
+    python apply_fb_persian_patch.py --allow-updates
+                                                undo the update block
+
+Applying the patch also disables the auto-updater: the app otherwise downloads
+the newest hosted build and installs it the moment you quit, which would replace
+this 0.0.192 install. That means pointing app-update.yml at a dead feed, deleting
+any installer already downloaded, and denying write access to its pending/ folder.
 
 Exit status: 0 ok, 1 applied but some selectors look stale, 2 hard failure.
 """
@@ -23,6 +30,7 @@ import json
 import os
 import re
 import shutil
+import subprocess
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -239,9 +247,160 @@ def missing_props(ui_dir: str) -> list[str]:
     return [p for p in CHECKED_PROPS if p not in text]
 
 
+# --- auto-updater block -----------------------------------------------------
+# The app auto-updates to the newest hosted build and installs it the moment the
+# window closes, which turns this 0.0.192 install into 0.0.195. Applying the
+# patch therefore pins the feed, deletes anything already downloaded, and denies
+# write access to the updater's pending/ folder.
+
+UPDATE_FEED_URL = "https://freebuff.com/api/desktop/updates/win-x64/"
+UPDATE_BLOCK_URL = "http://127.0.0.1:9/disabled-by-user/"
+
+
+def resources_dir(ui_dir: str) -> str:
+    return os.path.dirname(os.path.dirname(ui_dir))
+
+
+def updater_cache(yml_text: str) -> str | None:
+    m = re.search(r"^updaterCacheDirName:\s*'?([^'\r\n]+?)'?\s*$", yml_text, re.M)
+    if not m:
+        return None
+    base = os.environ.get("LOCALAPPDATA", "")
+    return os.path.join(base, m.group(1)) if base else None
+
+
+def pending_files(cache: str | None) -> list[str]:
+    if not cache:
+        return []
+    pend = os.path.join(cache, "pending")
+    if not os.path.isdir(pend):
+        return []
+    try:
+        names = os.listdir(pend)
+    except OSError:
+        # A deny ACE that also covers listing hides the names; the folder is
+        # locked either way, so report nothing rather than crash.
+        return []
+    return [os.path.join(pend, n) for n in names]
+
+
+def write_denied(path: str) -> bool:
+    probe = os.path.join(path, ".fb-write-probe")
+    try:
+        with open(probe, "wb") as fh:
+            fh.write(b"x")
+        os.remove(probe)
+        return False
+    except OSError:
+        return True
+
+
+def update_state(ui_dir: str) -> dict:
+    yml = os.path.join(resources_dir(ui_dir), "app-update.yml")
+    text = open(yml, encoding="utf-8").read() if os.path.isfile(yml) else ""
+    cache = updater_cache(text)
+    files = pending_files(cache)
+    size = sum(os.path.getsize(p) for p in files if os.path.isfile(p))
+    pend = os.path.join(cache, "pending") if cache else ""
+    return {"yml": yml, "exists": bool(text), "blocked": UPDATE_BLOCK_URL in text,
+            "cache": cache, "files": files, "bytes": size,
+            "locked": bool(pend and os.path.isdir(pend) and write_denied(pend))}
+
+
+def describe_updates(ui_dir: str) -> None:
+    st = update_state(ui_dir)
+    if not st["exists"]:
+        print("updates    : app-update.yml missing (cannot tell)")
+        return
+    feed = "disabled" if st["blocked"] else "LIVE - the app will update on quit"
+    lock = "locked" if st["locked"] else "writable"
+    print(f"updates    : feed {feed}; pending {len(st['files'])} file(s) "
+          f"({st['bytes'] / 1048576:.1f} MB); pending/ {lock}")
+
+
+def block_updates(ui_dir: str, dry_run: bool = False) -> int:
+    st = update_state(ui_dir)
+    yml = st["yml"]
+    if not st["exists"]:
+        print("update block: app-update.yml not found, skipped")
+        return 0
+    if not st["blocked"]:
+        if dry_run:
+            print("update block: would point app-update.yml at a dead feed")
+        else:
+            bak = yml + ".fb-orig"
+            if not os.path.isfile(bak):
+                shutil.copy2(yml, bak)
+            text = open(yml, encoding="utf-8").read()
+            new = re.sub(r"^url:\s*\S+.*$", "url: " + UPDATE_BLOCK_URL, text,
+                         count=1, flags=re.M)
+            if new == text:
+                new = text.rstrip("\r\n") + "\nurl: " + UPDATE_BLOCK_URL + "\n"
+            with open(yml, "w", encoding="utf-8", newline="\n") as fh:
+                fh.write(new)
+            print("update block: feed disabled (backup app-update.yml.fb-orig)")
+    else:
+        print("update block: feed already disabled")
+
+    cache = st["cache"]
+    if not cache:
+        print("update block: no updaterCacheDirName, cache cleanup skipped")
+        return 0
+    pend = os.path.join(cache, "pending")
+    if not dry_run:
+        os.makedirs(pend, exist_ok=True)
+    removed, freed = 0, 0
+    for path in [os.path.join(cache, "installer.exe"),
+                 os.path.join(cache, "current.blockmap")] + st["files"]:
+        if not os.path.isfile(path):
+            continue
+        if dry_run:
+            print(f"update block: would delete {path}")
+            continue
+        try:
+            size = os.path.getsize(path)
+            os.remove(path)
+            removed += 1
+            freed += size
+        except OSError as exc:
+            print(f"update block: could not delete {path}: {exc}")
+    if removed:
+        print(f"update block: removed {removed} cached file(s), {freed / 1048576:.1f} MB")
+    if os.name == "nt" and not dry_run:
+        user = os.environ.get("USERNAME", "")
+        try:
+            res = subprocess.run(["icacls", pend, "/deny", f"{user}:(OI)(CI)(WD,AD)"],
+                                 capture_output=True, text=True, timeout=30)
+            if res.returncode == 0:
+                print("update block: pending/ locked (write denied)")
+            else:
+                print(f"update block: icacls failed: {res.stderr.strip() or res.stdout.strip()}")
+        except (OSError, subprocess.SubprocessError) as exc:
+            print(f"update block: icacls unavailable ({exc})")
+    return 0
+
+
+def allow_updates(ui_dir: str) -> int:
+    st = update_state(ui_dir)
+    pend = os.path.join(st["cache"], "pending") if st["cache"] else ""
+    if os.name == "nt" and pend and os.path.isdir(pend):
+        user = os.environ.get("USERNAME", "")
+        subprocess.run(["icacls", pend, "/remove:d", user],
+                       capture_output=True, text=True, timeout=30)
+        print("updates: pending/ unlocked")
+    bak = st["yml"] + ".fb-orig"
+    if os.path.isfile(bak):
+        shutil.copy2(bak, st["yml"])
+        print("updates: app-update.yml restored")
+    else:
+        print("updates: no app-update.yml.fb-orig backup to restore")
+    return 0
+
+
 def check_state(ui_dir: str) -> int:
     print(f"ui dir     : {ui_dir}")
     print(f"app version: {app_version(ui_dir)}")
+    describe_updates(ui_dir)
     ok, total, missing = health_check(ui_dir)
     print(f"selectors  : {ok}/{total} still present in the bundle")
     gone_props = missing_props(ui_dir)
@@ -298,6 +457,7 @@ def apply_patch(ui_dir: str, dry_run: bool = False, force: bool = False) -> int:
             print("  index.html already patched")
         else:
             print("  would add the missing tag(s) after the bundle's stylesheet link")
+        block_updates(ui_dir, dry_run=True)
         return 0
 
     # 1) one-time backup, so the patch stays reversible by hand
@@ -347,6 +507,8 @@ def apply_patch(ui_dir: str, dry_run: bool = False, force: bool = False) -> int:
     elif not missing and not force:
         print("index.html -> already patched, nothing to do")
 
+    block_updates(ui_dir)
+
     ok, total, gone = health_check(ui_dir)
     print(f"\nselectors  : {ok}/{total} present in the bundle")
     gone_props = missing_props(ui_dir)
@@ -375,6 +537,8 @@ def main() -> int:
                     help="report state only, change nothing")
     ap.add_argument("--dry-run", action="store_true", help="show what would happen")
     ap.add_argument("--force", action="store_true", help="re-apply even if already present")
+    ap.add_argument("--allow-updates", action="store_true",
+                    help="undo the auto-update block (restore app-update.yml, unlock pending/)")
     args = ap.parse_args()
 
     ui_dir = find_ui_dir()
@@ -383,6 +547,8 @@ def main() -> int:
               file=sys.stderr)
         return 2
 
+    if args.allow_updates:
+        return allow_updates(ui_dir)
     if args.check:
         return check_state(ui_dir)
     return apply_patch(ui_dir, dry_run=args.dry_run, force=args.force)

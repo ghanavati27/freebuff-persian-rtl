@@ -27,6 +27,13 @@ state, `--dry-run` shows the plan, `--force` re-applies.
 Here CSS works: the local renderer has no CSP, so direction rules, the 1200 px
 chat column, list and table alignment are all stylesheet rules.
 
+It also **disables the auto-updater**, because otherwise the app downloads the
+newest hosted build in the background and installs it the moment you quit - which
+would replace 0.0.192 with 0.0.195 and take the chat out of this local UI. The
+patch points `resources/app-update.yml` at a dead feed, deletes any installer
+already in `%LOCALAPPDATA%\@codebufffreebuff-desktop-updater`, and denies write
+access to its `pending/` folder. `--allow-updates` undoes all three.
+
 ## Hosted UI (0.0.194 and newer) - JavaScript only
 
 ```bat

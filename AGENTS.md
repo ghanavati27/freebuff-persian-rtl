@@ -53,7 +53,11 @@ loads `ui/` for the chat, and 0.0.192 has no `hosted-preload`.
 `index.html` (original kept as `index.html.fb-persian-backup`). `--check`
 reports state, `--dry-run` shows the plan, `--force` re-applies. The selectors in
 `patch/fb-persian-rtl.css` must exist in the bundle; the installer verifies this
-and exits 1 when some are stale.
+and exits 1 when some are stale. It also **blocks the auto-updater**, which otherwise
+downloads the newest hosted build and installs it on quit: `app-update.yml` is
+pointed at a dead feed, cached installers are deleted, and the updater's
+`pending/` folder gets a deny-write ACE (`(OI)(CI)(WD,AD)`). `--allow-updates`
+reverses that.
 
 ### Hosted UI (0.0.194 and newer)
 

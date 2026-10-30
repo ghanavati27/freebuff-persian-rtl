@@ -26,6 +26,13 @@ Copies `fb-persian-rtl.css`, `fb-persian-rtl.js` and the three fonts into
 the stylesheet still exists in the bundle. A selector mismatch means the UI
 changed: update `patch/fb-persian-rtl.css` before shipping.
 
+It also disables the auto-updater: the feed in `resources/app-update.yml` is
+pinned to a dead URL, anything already downloaded is deleted, and
+`%LOCALAPPDATA%\@codebufffreebuff-desktop-updater\pending` is write-locked so the
+app cannot fetch 0.0.195 again. `python apply_fb_persian_patch.py --check` reports
+all three; `--allow-updates` undoes them when you want to move to a hosted
+build on purpose.
+
 **0.0.194 and newer** - hosted web app window:
 
 ```bat
