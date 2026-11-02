@@ -3,6 +3,27 @@
 Persian / RTL patch for Freebuff Desktop. Two delivery paths, picked by the app
 version - check which one you have before running anything.
 
+## Freebuff Desktop 0.0.192 installers
+
+0.0.195 and 0.0.196 lose local project access - the hosted workspace never binds
+to the machine, so the agent cannot read project files or run tools
+([CodebuffAI/freebuff#1593](https://github.com/CodebuffAI/freebuff/issues/1593)) -
+and the official download page only serves those builds now. Unmodified 0.0.192
+installers are mirrored in the
+[freebuff-0.0.192 release](https://github.com/ghanavati27/freebuff-persian-rtl/releases/tag/freebuff-0.0.192):
+
+| Asset | Size |
+|---|---|
+| `Freebuff-0.0.192-win-x64-...exe` | 261 MB |
+| `Freebuff-0.0.192-linux-x86_64-...AppImage` | 182 MB |
+
+After installing, **block the auto-updater** (the local installer below does it
+automatically): otherwise the app downloads 0.0.196 in the background and
+installs it when you quit.
+
+These are official installers redistributed for convenience; all rights belong to
+Freebuff / Codebuff.
+
 | Freebuff Desktop | UI lives in | Use |
 |---|---|---|
 | 0.0.192 and older | local files, `resources/orchestrator/ui/` | `apply_fb_persian_patch.py` |
