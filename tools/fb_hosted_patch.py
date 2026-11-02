@@ -78,14 +78,17 @@ def build_preload(original: str) -> str:
         fonts.append(json.dumps({"w": weight, "b": font_data_uri(fp)}))
     debug = ""
     if os.environ.get("FB_DEBUG_DOM"):
-        debug = ("try { var msg=null;setInterval(function(){ if(msg)return;"
-                 "var cs=document.querySelector('.composer-input-scroll');if(!cs)return;"
-                 "var tb=document.querySelector('.thread-body');var pin=tb?tb.style.width:'-',pc=tb?Math.round(tb.getBoundingClientRect().width):0,pp=tb&&tb.parentElement?Math.round(tb.parentElement.getBoundingClientRect().width):0;var out=['TB:'+pin+'/'+pc+'/p'+pp],e=cs;for(var k=0;k<5&&e&&e!==document.body;k++){"
-                 "var r=e.getBoundingClientRect();"
-                 "out.push(((e.className||e.tagName)+'').slice(0,34)+'@'+Math.round(r.width));"
-                 "e=e.parentElement;}"
-                 "msg='FBDBG '+out.join(' < ').slice(0,190);"
-                 "setInterval(function(){document.title=msg},700);},2000); } catch (e) {}")
+        debug = ("try { setInterval(function(){"
+                 "function w(sel){var e=document.querySelector(sel);"
+                 "return e?Math.round(e.getBoundingClientRect().width):-1;} "
+                 "var parts=['da='+document.querySelectorAll('[dir=auto]').length,"
+                 "'msg='+document.querySelectorAll('.msg').length,"
+                 "'tbl='+document.querySelectorAll('table').length,"
+                 "'tr='+w('.workspace-transcript-content'),"
+                 "'cmp='+w('.composer-box'),"
+                 "'tb='+w('.thread-body'),"
+                 "'li='+document.querySelectorAll('li').length];"
+                 "document.title='FBDBG '+parts.join(' ');},2500); } catch (e) {}")
     addon = """
 // ---- fb-persian-rtl: injected into the hosted workspace ----
 ;(function () {

@@ -109,3 +109,19 @@ Reading from `16 + len` made the preload begin with `")
 patched preload was a syntax error. `tools/fb_asar.py` now computes
 `pad = (-(16 + header_len)) % 4` on read, and on write shifts every offset by the
 real data-block delta, iterating until the digit count stops changing.
+
+## 0.0.196
+
+- The hosted preload grew to 7633 bytes and exposes a much wider bridge:
+  `nativeAgents`, `files`, `git`, `terminal`, `browser`, `localProjects`,
+  `openLocalProject`, `localConversations`, `prepareLocalChat` /
+  `releaseLocalChat`, `updates`, and a custom title bar flag. The hosted page can
+  drive local tools in this build.
+- The UI gained a right-hand panel (Browser / Files / Terminal / Changes), so the
+  chat column is bounded by it - about 700 px in a 1364 px window. The 1200 px
+  cap is now limited by that container rather than applied absolutely.
+- The DOM anchors the patch relies on are unchanged
+  (`.workspace-transcript-content`, `.composer-box`, `.thread-body`, `.msg`), so
+  the patch applies as-is. Live probe: 46 elements with `dir="auto"`, 16 `.msg`
+  blocks, transcript 1043 px, composer 1005 px, `.thread-body` 1065 px; Persian
+  rows share a right edge at ~1017 px.
