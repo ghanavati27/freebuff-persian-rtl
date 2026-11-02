@@ -6,7 +6,7 @@ there is no scheduled task.
 ## 1. Check the version
 
 ```bat
-cd C:\Users\Siroos\Hermes\freebuff-persian-rtl
+cd path\to\freebuff-persian-rtl
 python apply_fb_persian_patch.py --check
 ```
 

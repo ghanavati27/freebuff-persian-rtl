@@ -36,7 +36,7 @@ version. 0.0.194+ has `resources/app.asar.unpacked/electron/hosted-preload.cjs`
 ## Old UI (0.0.192 and older) - CSS + JS
 
 ```bat
-cd C:\Users\Siroos\Hermes\freebuff-persian-rtl
+cd path\to\freebuff-persian-rtl
 python apply_fb_persian_patch.py
 ```
 
