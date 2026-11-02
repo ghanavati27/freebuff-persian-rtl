@@ -139,3 +139,23 @@ only, no width rules) restores normal panel behaviour. The fix is `width:auto` +
 `max-width:1200px` on the transcript and no writes to the composer chain at all;
 measured after the fix, panel open: transcript 724 px, `.composer-box` 686 px,
 `.thread-body` 746 px.
+
+## The app ships its own Vazirmatn (0.0.196)
+
+The hosted app already defines a family called `Vazirmatn FB`: a live probe of
+`.msg` returned the computed stack `"Vazirmatn FB", "Vazirmatn FB"`. Registering a
+second `FontFace` under the same name does not replace it - the browser keeps both
+and swaps between them while they load, so Persian text looks broken and
+inconsistent until loading settles (reported as "the text went weird", then fixed
+itself).
+
+The patch now:
+
+- waits for `document.fonts.ready` before touching anything;
+- registers its bundled faces **only** when the page has none
+  (`document.fonts.check('16px "Vazirmatn FB"')` is false), so the app's own font
+  stays authoritative;
+- sets `font-family` through CSSOM on the transcript, composer, `.msg` blocks and
+  Persian-dominant blocks, with `'Vazirmatn FB'` first and the app's own stack
+  behind it. The bundled faces carry an `unicode-range` limited to Arabic, so
+  Latin and code still render in the app's own fonts.

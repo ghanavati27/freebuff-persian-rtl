@@ -78,13 +78,7 @@ def build_preload(original: str) -> str:
         fonts.append(json.dumps({"w": weight, "b": font_data_uri(fp)}))
     debug = ""
     if os.environ.get("FB_DEBUG_DOM"):
-        debug = ("try { setInterval(function(){"
-                 "function ch(sel,n){var e=document.querySelector(sel);if(!e)return sel+'?';"
-                 "var out=[];for(var k=0;k<n&&e&&e!==document.body;k++){"
-                 "out.push(((e.className||e.tagName)+'').split(' ')[0].slice(0,22)+'@'+Math.round(e.getBoundingClientRect().width));"
-                 "e=e.parentElement;}return out.join('<');} "
-                 "document.title='FBDBG C:'+ch('.composer-box',4)+' T:'+ch('.workspace-transcript-content',3);"
-                 "},3000); } catch (e) {}")
+        debug = '''try { setInterval(function(){var m=document.querySelector(".msg");var ff=m?getComputedStyle(m).fontFamily:"";var pe=null,els=document.querySelectorAll("p,li");for(var i=0;i<els.length;i++){var t=els[i].textContent||"";if(t.length&&t.charCodeAt(0)>1536){pe=els[i];break;}}var pf=pe?getComputedStyle(pe).fontFamily:"";document.title="FBDBG fonts="+document.fonts.size+" msg="+(ff||"-").slice(0,30)+" fa="+(pf||"-").slice(0,30);},3000); } catch (e) {}'''
     addon = """
 // ---- fb-persian-rtl: injected into the hosted workspace ----
 ;(function () {
@@ -98,8 +92,15 @@ def build_preload(original: str) -> str:
       return out.buffer
     }
     function addFonts() {
-      if (marked || !document.fonts) return
-      marked = true
+      if (!document.fonts || document.fonts.fbRegistered) return
+      document.fonts.fbRegistered = true
+      try {
+        // The hosted app ships its own copy of this family. Registering a second
+        // face under the same name makes the browser swap between them while they
+        // load, and text looks broken until they settle - so only fill the gap
+        // when the page has nothing of its own.
+        if (document.fonts.check('16px "Vazirmatn FB"')) return
+      } catch (e) {}
       for (var i = 0; i < FONTS.length; i++) {
         try {
           document.fonts.add(new FontFace('Vazirmatn FB', b64(FONTS[i].b), {
@@ -154,6 +155,18 @@ def build_preload(original: str) -> str:
             }
           }
         }catch(e){}}
+        var FB_FAMILY = "'Vazirmatn FB'";
+        function setFont(el){try{
+          if(!el||el.nodeType!==1)return;
+          var cur=getComputedStyle(el).fontFamily||'';
+          if(cur.indexOf('Vazirmatn FB')===0)return;
+          el.style.fontFamily=FB_FAMILY+(cur?', '+cur:'');
+        }catch(e){}}
+        function applyFonts(){try{
+          setFont(document.body);
+          var ls=document.querySelectorAll('.workspace-transcript-content,.composer-box,.composer-input-scroll,.msg');
+          for(var i=0;i<ls.length;i++)setFont(ls[i]);
+        }catch(e){}}
         function dirCount(s){var fa=0,la=0;for(var i=0;i<s.length;i++){var c=s.charCodeAt(i);if((c>=1536&&c<=1791)||(c>=1872&&c<=1919)||(c>=64336&&c<=65023))fa++;else if((c>=65&&c<=90)||(c>=97&&c<=122))la++;}return [fa,la];}
         function fixB(root){try{
           var els=root.querySelectorAll?root.querySelectorAll('li,p,blockquote,td,th'):[];
@@ -161,22 +174,32 @@ def build_preload(original: str) -> str:
             if(el.querySelector('li,p,table,pre'))continue;
             var t=el.textContent||'';if(t.length>4000)continue;
             var n=dirCount(t);var fa=n[0],la=n[1];
-            if(fa>0&&fa*2>=la){el.setAttribute('dir','rtl');el.style.textAlign='right';}
+            if(fa>0&&fa*2>=la){el.setAttribute('dir','rtl');el.style.textAlign='right';setFont(el);}
             else if(la>0&&fa===0){el.setAttribute('dir','ltr');el.style.textAlign='left';}}
           var cs=root.querySelectorAll?root.querySelectorAll('pre,code,kbd,samp'):[];
           for(var j=0;j<cs.length;j++){var cf=cs[j];cf.style.direction='ltr';cf.style.unicodeBidi='isolate';cf.style.textAlign='left';}
         }catch(e){}}
                 function apply(root){pad(root);fixT(root);fixB(root);setW();}
         apply(document.documentElement);
+        applyFonts();
         widen();
-        var n=0,iv=setInterval(function(){widen();layout();fixB(document);},1200);
+        var n=0,iv=setInterval(function(){applyFonts();widen();layout();fixB(document);},1200);
         new MutationObserver(function(rs){for(var r=0;r<rs.length;r++){
           var a=rs[r].addedNodes;for(var n=0;n<a.length;n++)apply(a[n]);}
         }).observe(document.documentElement,{childList:true,subtree:true});
       })() } catch (e) {}
     }
-    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run, { once: true })
-    else run()
+    function start() {
+      try {
+        if (document.fonts && document.fonts.ready && document.fonts.ready.then) {
+          document.fonts.ready.then(function () { addFonts(); run() })
+          return
+        }
+      } catch (e) {}
+      run()
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true })
+    else start()
   } catch (e) {}
 })()
 """ % (",".join(fonts), js, debug)

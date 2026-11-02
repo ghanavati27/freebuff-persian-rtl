@@ -69,8 +69,14 @@ reverses that.
    that block is copied byte-for-byte, so no offset moves.
 3. Writes `app.asar.unpacked/electron/hosted-preload.cjs` = the original preload
    plus an addon that, in JS only:
-   - registers Vazirmatn through `FontFace` (binary source, so CSP cannot block a
-     font fetch) with the Arabic `unicode-range`;
+   - waits for `document.fonts.ready`, then registers its bundled Vazirmatn faces
+     through `FontFace` **only if the page has none** (`document.fonts.check`),
+     with the Arabic `unicode-range`. The hosted app already defines a family
+     named `Vazirmatn FB`; registering a second one under the same name makes the
+     browser swap between faces mid-load and Persian text looks broken;
+   - sets `font-family` through CSSOM on the transcript, composer, `.msg` and
+     Persian-dominant blocks (`'Vazirmatn FB'` first, the app's stack behind it,
+     so Latin and code keep their own fonts);
    - runs `patch/fb-persian-rtl.js` (`dir="auto"` marker, sponsored-break
      auto-continue);
    - widens the transcript with `width:auto` + `max-width:1200px` + auto margins,
@@ -145,6 +151,9 @@ local UI this is unnecessary - the page has no CSP, so the CSS itself applies.
 - **React and inline styles** - React re-renders the composer subtree and drops
   inline styles, so the layout writes are repeated on a 1.2 s tick. Do not
   "optimise" that away without re-testing.
+- **Re-registering a font family the page already defines** - the hosted app
+  ships `Vazirmatn FB` itself; adding a second face with that name makes the
+  browser swap between them while they load. Check `document.fonts.check` first.
 - **Forcing widths on the hosted layout** - `width:100%` on
   `.workspace-transcript-content`, or on any ancestor of `.composer-box`, breaks
   the flex shrink: opening the right panel overlays the chat. Only `width:auto`
