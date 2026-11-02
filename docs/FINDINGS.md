@@ -125,3 +125,17 @@ real data-block delta, iterating until the digit count stops changing.
   the patch applies as-is. Live probe: 46 elements with `dir="auto"`, 16 `.msg`
   blocks, transcript 1043 px, composer 1005 px, `.thread-body` 1065 px; Persian
   rows share a right edge at ~1017 px.
+
+## Forcing a width breaks the hosted right panel (0.0.196)
+
+The layout code used to set `width:100%` on `.workspace-transcript-content` and to
+walk up from `.composer-box` forcing `width:100%` on every ancestor narrower than
+900 px. On 0.0.196 that stops the chat pane shrinking: opening the right panel
+(Browser / Files / Terminal / Changes) makes the panel paint *over* the chat
+instead of narrowing it, while the left panel keeps working.
+
+Proved by A/B: `FB_NO_LAYOUT=1 python toolsb_hosted_patch.py` (direction work
+only, no width rules) restores normal panel behaviour. The fix is `width:auto` +
+`max-width:1200px` on the transcript and no writes to the composer chain at all;
+measured after the fix, panel open: transcript 724 px, `.composer-box` 686 px,
+`.thread-body` 746 px.

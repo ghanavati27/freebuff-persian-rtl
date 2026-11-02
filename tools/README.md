@@ -20,6 +20,10 @@ There is no CSS on purpose: the hosted page's CSP rejects `insertCSS` (author an
 user origin) and injected `<style>` elements, so a stylesheet never applies. If
 you need a visual change, do it through DOM attributes or CSSOM.
 
+A/B switches: `FB_NO_LAYOUT=1` builds the direction-only variant (no width or gap
+writes) and `FB_DEBUG_DOM=1` makes the window title report live DOM measurements.
+Both are for diagnosis - rebuild without them before finishing.
+
 Debugging: set `FB_DEBUG_TITLE=1` when running the script to have the hosted
 window show `FB-RTL n=<marked elements>` in its title.
 

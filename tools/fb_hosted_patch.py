@@ -79,16 +79,12 @@ def build_preload(original: str) -> str:
     debug = ""
     if os.environ.get("FB_DEBUG_DOM"):
         debug = ("try { setInterval(function(){"
-                 "function w(sel){var e=document.querySelector(sel);"
-                 "return e?Math.round(e.getBoundingClientRect().width):-1;} "
-                 "var parts=['da='+document.querySelectorAll('[dir=auto]').length,"
-                 "'msg='+document.querySelectorAll('.msg').length,"
-                 "'tbl='+document.querySelectorAll('table').length,"
-                 "'tr='+w('.workspace-transcript-content'),"
-                 "'cmp='+w('.composer-box'),"
-                 "'tb='+w('.thread-body'),"
-                 "'li='+document.querySelectorAll('li').length];"
-                 "document.title='FBDBG '+parts.join(' ');},2500); } catch (e) {}")
+                 "function ch(sel,n){var e=document.querySelector(sel);if(!e)return sel+'?';"
+                 "var out=[];for(var k=0;k<n&&e&&e!==document.body;k++){"
+                 "out.push(((e.className||e.tagName)+'').split(' ')[0].slice(0,22)+'@'+Math.round(e.getBoundingClientRect().width));"
+                 "e=e.parentElement;}return out.join('<');} "
+                 "document.title='FBDBG C:'+ch('.composer-box',4)+' T:'+ch('.workspace-transcript-content',3);"
+                 "},3000); } catch (e) {}")
     addon = """
 // ---- fb-persian-rtl: injected into the hosted workspace ----
 ;(function () {
@@ -139,33 +135,23 @@ def build_preload(original: str) -> str:
               var cs=t.querySelectorAll('th,td');
               for(var m=0;m<cs.length;m++)cs[m].style.textAlign='right';}
             if(t.dataset)t.dataset.fbTbl='1';}}catch(e){}}
-        function setW(){try{var r=document.documentElement;r.style.setProperty('--dk-chat-content-max-width','1200px');r.style.setProperty('--chat-content-max-width','1200px');}catch(e){}}function widen(){try{var els=document.querySelectorAll('div,section,article');for(var i=0;i<els.length;i++){var el=els[i];if(el.classList&&el.classList.contains('workspace-transcript-content')){el.style.width='100%%';el.style.maxWidth='1200px';el.style.marginLeft='auto';el.style.marginRight='auto';}var mw=getComputedStyle(el).maxWidth;if(!mw||mw.slice(-2)!=='px')continue;var v=parseFloat(mw);if(v>=700&&v<=900&&el.clientWidth>500)el.style.maxWidth='1200px';}}catch(e){}}function lca(a,b){var s=new Set();for(var e=a;e;e=e.parentElement)s.add(e);for(var e=b;e;e=e.parentElement)if(s.has(e))return e;return null;}
+        function setW(){try{var r=document.documentElement;r.style.setProperty('--dk-chat-content-max-width','1200px');r.style.setProperty('--chat-content-max-width','1200px');}catch(e){}}
+        function widen(){try{
+          var t=document.querySelector('.workspace-transcript-content');
+          if(t){t.style.width='auto';t.style.maxWidth='1200px';
+                t.style.marginLeft='auto';t.style.marginRight='auto';}
+        }catch(e){}}
+        function lca(a,b){var s=new Set();for(var e=a;e;e=e.parentElement)s.add(e);for(var e=b;e;e=e.parentElement)if(s.has(e))return e;return null;}
         function layout(){try{
           var t=document.querySelector('.workspace-transcript-content');
           var ci=document.querySelector('.composer-input-scroll');
-          var bx=document.querySelector('.composer-box');
-          if(ci){
-            var e=bx||ci;
-            while(e&&e!==document.body){
-              var w=e.getBoundingClientRect().width;
-              if(w>=900)break;
-              e.style.width='100%%';e.style.maxWidth='1200px';
-              e.style.marginLeft='auto';e.style.marginRight='auto';
-              e=e.parentElement;}
-            ci.style.width='100%%';
-          }
-          if(t){
-            t.style.width='100%%';t.style.maxWidth='1200px';
-            t.style.marginLeft='auto';t.style.marginRight='auto';
-          }
+          if(t){t.style.width='auto';t.style.maxWidth='1200px';
+                t.style.marginLeft='auto';t.style.marginRight='auto';}
           if(t&&ci){
             var p=lca(t,ci);
-            if(p&&p!==document.body){p.style.paddingLeft='6px';p.style.paddingRight='6px';}
-            var c=ci;while(c&&c.parentElement!==p)c=c.parentElement;
-            var cols=[t];if(c&&c!==p)cols.push(c);
-            for(var i=0;i<cols.length;i++){var el=cols[i];
-              el.style.width='100%%';el.style.maxWidth='1200px';
-              el.style.marginLeft='auto';el.style.marginRight='auto';}
+            if(p&&p!==document.body){
+              p.style.paddingLeft='6px';p.style.paddingRight='6px';
+            }
           }
         }catch(e){}}
         function dirCount(s){var fa=0,la=0;for(var i=0;i<s.length;i++){var c=s.charCodeAt(i);if((c>=1536&&c<=1791)||(c>=1872&&c<=1919)||(c>=64336&&c<=65023))fa++;else if((c>=65&&c<=90)||(c>=97&&c<=122))la++;}return [fa,la];}
@@ -194,6 +180,11 @@ def build_preload(original: str) -> str:
   } catch (e) {}
 })()
 """ % (",".join(fonts), js, debug)
+    if os.environ.get("FB_NO_LAYOUT"):
+        # A/B switch: keep direction work, drop the width/gap overrides.
+        addon = addon.replace("var n=0,iv=setInterval(function(){widen();layout();fixB(document);},1200);",
+                              "var n=0,iv=setInterval(function(){fixB(document);},1200);")
+        addon = addon.replace("        widen();", "        ")
     return original + addon
 
 

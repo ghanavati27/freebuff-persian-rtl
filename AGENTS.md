@@ -73,9 +73,12 @@ reverses that.
      font fetch) with the Arabic `unicode-range`;
    - runs `patch/fb-persian-rtl.js` (`dir="auto"` marker, sponsored-break
      auto-continue);
-   - widens the transcript (`width:100%`, `max-width:1200px`, auto margins) and
-     matches the composer to it by climbing from `.composer-box` to the first
-     ancestor at least 900 px wide;
+   - widens the transcript with `width:auto` + `max-width:1200px` + auto margins,
+     and leaves the composer chain alone (the app keeps the two equal itself).
+     **Never force `width:100%`, and never walk up the composer's ancestors
+     setting widths**: the chat pane is a flex layout, and a forced width stops it
+     shrinking when the right panel opens, so the panel then paints over the chat
+     instead of narrowing it (measured on 0.0.196);
    - adds 6 px left/right padding on the lowest common ancestor of transcript and
      composer; the pane already insets 24 px, so the measured gap is 30 px on each
      side;
@@ -142,3 +145,8 @@ local UI this is unnecessary - the page has no CSP, so the CSS itself applies.
 - **React and inline styles** - React re-renders the composer subtree and drops
   inline styles, so the layout writes are repeated on a 1.2 s tick. Do not
   "optimise" that away without re-testing.
+- **Forcing widths on the hosted layout** - `width:100%` on
+  `.workspace-transcript-content`, or on any ancestor of `.composer-box`, breaks
+  the flex shrink: opening the right panel overlays the chat. Only `width:auto`
+  plus `max-width` is safe. `FB_NO_LAYOUT=1 python toolsb_hosted_patch.py`
+  builds the direction-only variant used to prove which half was at fault.
