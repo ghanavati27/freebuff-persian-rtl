@@ -79,15 +79,13 @@ reverses that.
      so Latin and code keep their own fonts);
    - runs `patch/fb-persian-rtl.js` (`dir="auto"` marker, sponsored-break
      auto-continue);
-   - widens the transcript with `width:auto` + `max-width:1200px` + auto margins,
-     and leaves the composer chain alone (the app keeps the two equal itself).
-     **Never force `width:100%`, and never walk up the composer's ancestors
-     setting widths**: the chat pane is a flex layout, and a forced width stops it
-     shrinking when the right panel opens, so the panel then paints over the chat
-     instead of narrowing it (measured on 0.0.196);
-   - adds 6 px left/right padding on the lowest common ancestor of transcript and
-     composer; the pane already insets 24 px, so the measured gap is 30 px on each
-     side;
+   - fills the chat column dynamically: `width:auto` + `max-width:none` + a
+     symmetric 24 px margin on `.workspace-transcript-content`, and
+     `width:auto` on `.composer-box` / `.composer.workspace-composer`. The
+     transcript is pinned to 720 px and pushed right by a computed gutter margin,
+     which is why only that pair widens it. **`auto`, never a fixed width or
+     `width:100%`**: the pane is a flex layout and a forced width stops it
+     shrinking when a side panel opens, so the panel then paints over the chat;
    - sets `style.marginRight = '24px'` on `.msg` blocks;
    - sets `direction: rtl` and right-aligned cells on Persian-dominant tables;
    - sets `dir`/`text-align` on Persian-dominant blocks (`li`, `p`, `blockquote`,

@@ -78,7 +78,7 @@ def build_preload(original: str) -> str:
         fonts.append(json.dumps({"w": weight, "b": font_data_uri(fp)}))
     debug = ""
     if os.environ.get("FB_DEBUG_DOM"):
-        debug = '''try { setInterval(function(){var m=document.querySelector(".msg");var ff=m?getComputedStyle(m).fontFamily:"";var pe=null,els=document.querySelectorAll("p,li");for(var i=0;i<els.length;i++){var t=els[i].textContent||"";if(t.length&&t.charCodeAt(0)>1536){pe=els[i];break;}}var pf=pe?getComputedStyle(pe).fontFamily:"";document.title="FBDBG fonts="+document.fonts.size+" msg="+(ff||"-").slice(0,30)+" fa="+(pf||"-").slice(0,30);},3000); } catch (e) {}'''
+        debug = '''try { setInterval(function(){function w(sl){var e=document.querySelector(sl);return e?Math.round(e.getBoundingClientRect().width):-1;}document.title="FBDBG tr="+w(".workspace-transcript-content")+" cmp="+w(".composer-box")+" pane="+w(".workspace-transcript")+" tb="+w(".thread-body");},3000); } catch (e) {}'''
     addon = """
 // ---- fb-persian-rtl: injected into the hosted workspace ----
 ;(function () {
@@ -136,23 +136,30 @@ def build_preload(original: str) -> str:
               var cs=t.querySelectorAll('th,td');
               for(var m=0;m<cs.length;m++)cs[m].style.textAlign='right';}
             if(t.dataset)t.dataset.fbTbl='1';}}catch(e){}}
-        function setW(){try{var r=document.documentElement;r.style.setProperty('--dk-chat-content-max-width','1200px');r.style.setProperty('--chat-content-max-width','1200px');}catch(e){}}
-        function widen(){try{
+        // Fill the chat column: the transcript block and the composer box are
+        // pinned to a fixed 720 px in CSS. Setting width to auto makes them take
+        // whatever the pane gives them, and because it is `auto` (not a forced width)
+        // the flex layout still shrinks them when a side panel opens (and unlike a
+        // forced 100 percent width, it cannot pin the pane open).
+        // Fill the chat column dynamically. The transcript block and the composer
+        // box are pinned to a fixed 720 px and the transcript is pushed right by a
+        // computed gutter margin; with width:auto plus a symmetric 24 px margin the
+        // chat fills whatever the pane gives it. `auto` (not a forced width) keeps
+        // the flex layout free to shrink the pane when a side panel opens.
+        function fit(){try{
           var t=document.querySelector('.workspace-transcript-content');
-          if(t){t.style.width='auto';t.style.maxWidth='1200px';
-                t.style.marginLeft='auto';t.style.marginRight='auto';}
-        }catch(e){}}
-        function lca(a,b){var s=new Set();for(var e=a;e;e=e.parentElement)s.add(e);for(var e=b;e;e=e.parentElement)if(s.has(e))return e;return null;}
-        function layout(){try{
-          var t=document.querySelector('.workspace-transcript-content');
-          var ci=document.querySelector('.composer-input-scroll');
-          if(t){t.style.width='auto';t.style.maxWidth='1200px';
-                t.style.marginLeft='auto';t.style.marginRight='auto';}
-          if(t&&ci){
-            var p=lca(t,ci);
-            if(p&&p!==document.body){
-              p.style.paddingLeft='6px';p.style.paddingRight='6px';
-            }
+          if(t){
+            if(t.style.width!=='auto')t.style.width='auto';
+            if(t.style.maxWidth!=='none')t.style.maxWidth='none';
+            if(t.style.marginLeft!=='24px')t.style.marginLeft='24px';
+            if(t.style.marginRight!=='24px')t.style.marginRight='24px';
+          }
+          var sels=['.composer-box','.composer.workspace-composer'];
+          for(var i=0;i<sels.length;i++){
+            var e=document.querySelector(sels[i]);
+            if(!e)continue;
+            if(e.style.width!=='auto')e.style.width='auto';
+            if(e.style.maxWidth!=='none')e.style.maxWidth='none';
           }
         }catch(e){}}
         var FB_FAMILY = "'Vazirmatn FB'";
@@ -179,11 +186,11 @@ def build_preload(original: str) -> str:
           var cs=root.querySelectorAll?root.querySelectorAll('pre,code,kbd,samp'):[];
           for(var j=0;j<cs.length;j++){var cf=cs[j];cf.style.direction='ltr';cf.style.unicodeBidi='isolate';cf.style.textAlign='left';}
         }catch(e){}}
-                function apply(root){pad(root);fixT(root);fixB(root);setW();}
+                function apply(root){pad(root);fixT(root);fixB(root);}
         apply(document.documentElement);
         applyFonts();
-        widen();
-        var n=0,iv=setInterval(function(){applyFonts();widen();layout();fixB(document);},1200);
+        fit();
+        var n=0,iv=setInterval(function(){applyFonts();fit();fixB(document);},1200);
         new MutationObserver(function(rs){for(var r=0;r<rs.length;r++){
           var a=rs[r].addedNodes;for(var n=0;n<a.length;n++)apply(a[n]);}
         }).observe(document.documentElement,{childList:true,subtree:true});
@@ -203,11 +210,6 @@ def build_preload(original: str) -> str:
   } catch (e) {}
 })()
 """ % (",".join(fonts), js, debug)
-    if os.environ.get("FB_NO_LAYOUT"):
-        # A/B switch: keep direction work, drop the width/gap overrides.
-        addon = addon.replace("var n=0,iv=setInterval(function(){widen();layout();fixB(document);},1200);",
-                              "var n=0,iv=setInterval(function(){fixB(document);},1200);")
-        addon = addon.replace("        widen();", "        ")
     return original + addon
 
 

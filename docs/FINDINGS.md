@@ -159,3 +159,17 @@ The patch now:
   Persian-dominant blocks, with `'Vazirmatn FB'` first and the app's own stack
   behind it. The bundled faces carry an `unicode-range` limited to Arabic, so
   Latin and code still render in the app's own fonts.
+
+## Filling the chat column (0.0.198)
+
+Two things pinned the chat to ~720 px, not one: `.workspace-transcript-content`
+carries a fixed width **and** a computed left margin (measured 293 px in a
+1306 px pane) that keeps the column centred. Setting `width:auto` alone made it
+1003 px and stuck to the right; zeroing the margin plus `max-width:none` fills
+the pane. `fit()` now writes `width:auto; max-width:none; margin:0 24px` on the
+transcript and `width:auto` on `.composer-box` and
+`.composer.workspace-composer`.
+
+Measured after the change: pane 1306, transcript 1248, composer 1258, so the two
+match and follow the pane. `auto` rather than a fixed width is what keeps the
+flex layout free to shrink the pane when a side panel opens.
