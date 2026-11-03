@@ -91,3 +91,14 @@ percentage stops the shrink and the panel then paints over the chat.
   Tailwind classes.
 - React re-renders the composer subtree and drops inline styles, so the style
   writes are repeated on a 1.2 s tick.
+
+## The empty state must be left alone
+
+A new chat tab has no transcript, and its composer sits in a different layout:
+the wrapper is sized by the app's own rules rather than by the conversation
+column. Applying `width:auto` there collapses it - measured `.composer-box` at
+10 px and `.composer-input-scroll` at 0 px, i.e. an invisible input.
+
+`fit()` is therefore gated on `.workspace-transcript-content` existing: inside a
+conversation it applies the width overrides, and outside one it removes them
+again so the app's empty-state layout is untouched.

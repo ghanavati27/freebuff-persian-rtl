@@ -55,7 +55,10 @@ built or forked.
      so Latin and code keep their own fonts);
    - runs `patch/fb-persian-rtl.js` (`dir="auto"` marker, sponsored-break
      auto-continue);
-   - fills the chat column: `width:auto` + `max-width:none` + a symmetric 24 px
+   - fills the chat column **only when a transcript exists** (a new chat tab has
+     no transcript and its composer is laid out differently - forcing
+     `width:auto` there collapses the input to a few pixels, so the overrides are
+     removed in that state): `width:auto` + `max-width:none` + a symmetric 24 px
      margin on `.workspace-transcript-content`, and `width:auto` on
      `.composer-box` / `.composer.workspace-composer`. The transcript is pinned
      to a fixed width and pushed right by a computed gutter margin, which is why

@@ -78,7 +78,7 @@ def build_preload(original: str) -> str:
         fonts.append(json.dumps({"w": weight, "b": font_data_uri(fp)}))
     debug = ""
     if os.environ.get("FB_DEBUG_DOM"):
-        debug = '''try { setInterval(function(){function w(sl){var e=document.querySelector(sl);return e?Math.round(e.getBoundingClientRect().width):-1;}document.title="FBDBG tr="+w(".workspace-transcript-content")+" cmp="+w(".composer-box")+" pane="+w(".workspace-transcript")+" tb="+w(".thread-body");},3000); } catch (e) {}'''
+        debug = '''try { setInterval(function(){function info(sl){var e=document.querySelector(sl);if(!e)return sl.slice(1,18)+"=none";var cs=getComputedStyle(e);return sl.replace(/[^a-z.-]/g,"").slice(1,18)+"="+Math.round(e.getBoundingClientRect().width)+","+cs.width+","+cs.maxWidth; }document.title="FBDBG "+info(".composer-box")+" | "+info(".composer-input-scroll")+" | "+info(".composer.workspace-composer")+" | "+info(".workspace-transcript-content")+" | "+info(".chat-empty-state,.empty-state,.hero")+" | msgs="+document.querySelectorAll(".msg").length;},2500); } catch (e) {}'''
     addon = """
 // ---- fb-persian-rtl: injected into the hosted workspace ----
 ;(function () {
@@ -146,20 +146,31 @@ def build_preload(original: str) -> str:
         // computed gutter margin; with width:auto plus a symmetric 24 px margin the
         // chat fills whatever the pane gives it. `auto` (not a forced width) keeps
         // the flex layout free to shrink the pane when a side panel opens.
+        // Fill the chat column dynamically, but only inside a conversation. The
+        // empty state (a new chat tab) lays the composer out differently: there the
+        // wrapper is sized by the app's own rules and forcing width:auto collapses
+        // it to a few pixels, so our overrides are removed instead of applied.
         function fit(){try{
           var t=document.querySelector('.workspace-transcript-content');
+          var csel=['.composer-box','.composer.workspace-composer'];
           if(t){
             if(t.style.width!=='auto')t.style.width='auto';
             if(t.style.maxWidth!=='none')t.style.maxWidth='none';
             if(t.style.marginLeft!=='24px')t.style.marginLeft='24px';
             if(t.style.marginRight!=='24px')t.style.marginRight='24px';
-          }
-          var sels=['.composer-box','.composer.workspace-composer'];
-          for(var i=0;i<sels.length;i++){
-            var e=document.querySelector(sels[i]);
-            if(!e)continue;
-            if(e.style.width!=='auto')e.style.width='auto';
-            if(e.style.maxWidth!=='none')e.style.maxWidth='none';
+            for(var i=0;i<csel.length;i++){
+              var e=document.querySelector(csel[i]);
+              if(!e)continue;
+              if(e.style.width!=='auto')e.style.width='auto';
+              if(e.style.maxWidth!=='none')e.style.maxWidth='none';
+            }
+          } else {
+            for(var j=0;j<csel.length;j++){
+              var c=document.querySelector(csel[j]);
+              if(!c)continue;
+              if(c.style.width)c.style.width='';
+              if(c.style.maxWidth)c.style.maxWidth='';
+            }
           }
         }catch(e){}}
         var FB_FAMILY = "'Vazirmatn FB'";
