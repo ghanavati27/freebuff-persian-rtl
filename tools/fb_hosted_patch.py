@@ -1,12 +1,12 @@
-"""Inject the Persian/RTL patch into the HOSTED workspace window.
+"""Inject the Persian/RTL patch into the hosted workspace window.
 
-Freebuff 0.0.194 stopped rendering the chat from resources/orchestrator/ui.
-The local UI is only the splash; the chat is the hosted web app opened in its
-own BrowserWindow with electron/hosted-preload.cjs.
+The chat is a web app opened in its own BrowserWindow with
+electron/hosted-preload.cjs; resources/orchestrator/ui/ is only the splash.
 
 This script repoints that one preload at app.asar.unpacked/ (leaving the asar
-data block byte-identical) and writes a preload that inserts the patch CSS and
-runs the dir="auto" marker in the hosted document.
+data block byte-identical) and writes a preload that runs the patch: the
+dir="auto" marker, the block and table direction rules, and the chat-column fill.
+No CSS - the page's CSP rejects stylesheets, so everything goes through the DOM.
 """
 
 from __future__ import annotations

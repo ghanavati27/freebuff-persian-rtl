@@ -2,7 +2,7 @@
 
 ## `tools/fb_hosted_patch.py`
 
-The installer for the hosted chat window (0.0.194+).
+The installer for the hosted chat window.
 
 ```bat
 python tools\fb_hosted_patch.py            # apply / re-apply
@@ -12,36 +12,20 @@ python tools\fb_hosted_patch.py --restore  # rollback
 ```
 
 It marks `electron/hosted-preload.cjs` as `unpacked` in `app.asar` and writes an
-unpacked copy of that preload with the JS patch appended: Vazirmatn via the
-`FontFace` API, the `dir="auto"` marker from `patch/fb-persian-rtl.js`, the 24 px
-`.msg` right gutter and Persian-table alignment.
+unpacked copy of that preload with the JS patch appended: the Vazirmatn faces
+(registered only when the page has none, after `document.fonts.ready`), the
+`dir="auto"` marker from `patch/fb-persian-rtl.js`, the chat-column fill, and the
+table and block direction rules.
 
-There is no CSS on purpose: the hosted page's CSP rejects `insertCSS` (author and
-user origin) and injected `<style>` elements, so a stylesheet never applies. If
-you need a visual change, do it through DOM attributes or CSSOM.
+There is no CSS on purpose: the page's CSP rejects `insertCSS` and injected
+`<style>` elements, so a stylesheet never applies. Visual changes go through DOM
+attributes or CSSOM.
 
-A/B switches: `FB_NO_LAYOUT=1` builds the direction-only variant (no width or gap
-writes) and `FB_DEBUG_DOM=1` makes the window title report live DOM measurements.
-Both are for diagnosis - rebuild without them before finishing.
-
-Debugging: set `FB_DEBUG_TITLE=1` when running the script to have the hosted
-window show `FB-RTL n=<marked elements>` in its title.
+Debugging: `FB_DEBUG_DOM=1` makes the built preload report live DOM measurements
+in the window title. Rebuild without it when you are done - it changes the title.
 
 ## `tools/fb_asar.py`
 
-A minimal asar reader/writer used by the installer: parse the header, read a
-file, and repack the header while keeping the data block byte-identical.
-
-## Local UI
-
-`apply_fb_persian_patch.py` in the repo root handles Freebuff 0.0.192 and older,
-where the chat is served from `resources/orchestrator/ui/`. It installs the CSS,
-the JS and the fonts into `ui/assets/` and edits `index.html`; there the stylesheet
-does apply.
-
-## Removed
-
-The old harnesses (`verify_chat_width.py`, `verify_ads_hidden.py`,
-`verify_break_autocontinue.py`, `measure_ink.py`, `check_dependencies.py`,
-`scan_text_surfaces.py`) targeted the local `ui/` markup and were deleted rather
-than left to rot.
+A minimal asar reader/writer used by the installer: parse the header (including
+the padding that precedes the data block), read a file, and repack the header
+while keeping the data block byte-identical.
