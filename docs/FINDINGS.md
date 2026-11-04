@@ -102,3 +102,29 @@ column. Applying `width:auto` there collapses it - measured `.composer-box` at
 `fit()` is therefore gated on `.workspace-transcript-content` existing: inside a
 conversation it applies the width overrides, and outside one it removes them
 again so the app's empty-state layout is untouched.
+
+## The model's question UI ships left-to-right
+
+`ask_questions` renders in a bottom dock (`section.question-dock`) or a centred
+modal, and both are laid out LTR: the dock computes `direction: ltr` and
+`.question-text` computes `text-align: start`. The question line only looked
+right because it is a single RTL run; the option rows did not. Measured on the
+shipped build, option text had a constant left edge (x = 34, 35, 48, 50) and a
+ragged right - Persian pinned to the left margin, marker on the left.
+
+`fixQ()` in the addon fixes it. Every text block of that UI
+(`.question-text`, `.question-option`, `-label`, `-desc`, `.question-head`,
+`.question-chip`, `.question-hint`, `.question-title`) gets `dir` and
+`text-align` from its own content, with the same `fa > 0 && fa*2 >= la` ratio
+used for tables and list items, and the `.question-dock` / `.question-modal` /
+`.question-panel` container is flipped to RTL when its question text resolved
+to RTL. After: every option line ends at x = 1152 (question 1165) with a ragged
+left edge, `dock dir=rtl`, `.question-text` `text-align: right`.
+
+Two traps:
+
+- The dock is not in the DOM at startup. `fixQ()` was called once at boot and
+  the 1.2 s tick did not include it, so it ran `runs=1` and applied nothing.
+  It has to be in the interval.
+- The option rows contain no `input[type=checkbox]` (`inputs=0`), so the marker
+  is drawn by CSS - measure it in pixels, not in the DOM.

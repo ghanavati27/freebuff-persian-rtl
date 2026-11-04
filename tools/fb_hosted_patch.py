@@ -78,7 +78,7 @@ def build_preload(original: str) -> str:
         fonts.append(json.dumps({"w": weight, "b": font_data_uri(fp)}))
     debug = ""
     if os.environ.get("FB_DEBUG_DOM"):
-        debug = '''try { setInterval(function(){function info(sl){var e=document.querySelector(sl);if(!e)return sl.slice(1,18)+"=none";var cs=getComputedStyle(e);return sl.replace(/[^a-z.-]/g,"").slice(1,18)+"="+Math.round(e.getBoundingClientRect().width)+","+cs.width+","+cs.maxWidth; }document.title="FBDBG "+info(".composer-box")+" | "+info(".composer-input-scroll")+" | "+info(".composer.workspace-composer")+" | "+info(".workspace-transcript-content")+" | "+info(".chat-empty-state,.empty-state,.hero")+" | msgs="+document.querySelectorAll(".msg").length;},2500); } catch (e) {}'''
+        debug = '''try { setInterval(function(){document.title="FBDBG da="+document.querySelectorAll("[dir=auto]").length;},2500); } catch (e) {}'''
     addon = """
 // ---- fb-persian-rtl: injected into the hosted workspace ----
 ;(function () {
@@ -173,6 +173,47 @@ def build_preload(original: str) -> str:
             }
           }
         }catch(e){}}
+        // The question dock asks its questions in left-to-right rows: the dock,
+        // the question text and every option are laid out LTR, so Persian is
+        // pinned to the left edge and the markers stay on the wrong side. Give the
+        // dock's text blocks their own direction, judged by their own content.
+        function fixQ(){try{
+          // The question UI (bottom dock and the centred modal) lays its rows out
+          // left-to-right, so Persian sits on the left edge and markers stay on the
+          // wrong side. Give every question text block its own direction, judged by
+          // its own content, and flip the dock/modal container when it is Persian.
+          var SEL='[class*="question-text"],[class*="question-option"],[class*="question-head"],[class*="question-chip"],[class*="question-hint"],[class*="question-title"]';
+          var els=document.querySelectorAll(SEL);
+          for(var i=0;i<els.length;i++){var el=els[i];
+            var t=el.textContent||'';if(!t||t.length>4000)continue;
+            var n=dirCount(t);var fa=n[0],la=n[1];
+            if(fa>0&&fa*2>=la){
+              if(el.getAttribute('dir')!=='rtl')el.setAttribute('dir','rtl');
+              el.style.textAlign='right';
+            } else if(la>0&&fa===0){
+              if(el.getAttribute('dir')!=='ltr')el.setAttribute('dir','ltr');
+              el.style.textAlign='left';
+            }
+          }
+          // The header is a control bar (minimise button, "1 of 2" pager, arrows)
+          // built for LTR. Inside the RTL container its spans are re-ordered, so
+          // the pager reads "of 2 1" with the arrows swapped. Pin it back to LTR
+          // and isolate it from the surrounding RTL text.
+          var ltr=document.querySelectorAll('[class*="question-pager"],[class*="question-dock-head"]');
+          for(var m=0;m<ltr.length;m++){var le=ltr[m];
+            if(le.getAttribute('dir')!=='ltr')le.setAttribute('dir','ltr');
+            le.style.direction='ltr';
+            le.style.unicodeBidi='isolate';
+          }
+          var boxes=document.querySelectorAll('[class*="question-dock"],[class*="question-modal"],[class*="question-panel"]');
+          for(var k=0;k<boxes.length;k++){var box=boxes[k];
+            var qt=box.querySelector('[class*="question-text"]');
+            if(qt&&qt.getAttribute('dir')==='rtl'){
+              if(box.getAttribute('dir')!=='rtl')box.setAttribute('dir','rtl');
+              box.style.textAlign='right';
+            }
+          }
+        }catch(e){}}
         var FB_FAMILY = "'Vazirmatn FB'";
         function setFont(el){try{
           if(!el||el.nodeType!==1)return;
@@ -200,8 +241,9 @@ def build_preload(original: str) -> str:
                 function apply(root){pad(root);fixT(root);fixB(root);}
         apply(document.documentElement);
         applyFonts();
+        fixQ();
         fit();
-        var n=0,iv=setInterval(function(){applyFonts();fit();fixB(document);},1200);
+        var n=0,iv=setInterval(function(){applyFonts();fixQ();fit();fixB(document);},1200);
         new MutationObserver(function(rs){for(var r=0;r<rs.length;r++){
           var a=rs[r].addedNodes;for(var n=0;n<a.length;n++)apply(a[n]);}
         }).observe(document.documentElement,{childList:true,subtree:true});

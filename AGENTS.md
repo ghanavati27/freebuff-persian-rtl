@@ -69,7 +69,17 @@ built or forked.
    - sets `direction: rtl` and right-aligned cells on Persian-dominant tables;
    - sets `dir`/`text-align` on Persian-dominant blocks (`li`, `p`, `blockquote`,
      `th`, `td`) so a leading checkbox or icon moves to the right edge, and pins
-     `pre`/`code` to LTR.
+     `pre`/`code` to LTR;
+   - gives the model's question UI its direction: `.question-text`,
+     `.question-option`, `.question-option-label`, `.question-option-desc`,
+     `.question-head`, `.question-chip`, `.question-hint`, `.question-title`
+     each get `dir`/`text-align` from their own content, and the
+     `.question-dock` / modal container is flipped to RTL when its question is
+     Persian. That UI ships fully LTR, so before this the question looked right
+     but every option was pinned to the left edge (constant left edge at 34 px,
+     ragged right) with the row marker on the left. `fixQ()` **must stay on the
+     1.2 s tick**: at startup the dock is not in the DOM yet, so a single call
+     applies nothing.
 
 Rollback: `python tools\fb_hosted_patch.py --restore`.
 
