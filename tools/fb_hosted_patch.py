@@ -182,7 +182,7 @@ def build_preload(original: str) -> str:
           // left-to-right, so Persian sits on the left edge and markers stay on the
           // wrong side. Give every question text block its own direction, judged by
           // its own content, and flip the dock/modal container when it is Persian.
-          var SEL='[class*="question-text"],[class*="question-option"],[class*="question-head"],[class*="question-chip"],[class*="question-hint"],[class*="question-title"]';
+          var SEL='[class*="question-text"],[class*="question-option"],[class*="question-head"],[class*="question-chip"],[class*="question-hint"],[class*="question-title"],[class*="question-dock-title"],[class*="question-plan"]';
           var els=document.querySelectorAll(SEL);
           for(var i=0;i<els.length;i++){var el=els[i];
             var t=el.textContent||'';if(!t||t.length>4000)continue;
