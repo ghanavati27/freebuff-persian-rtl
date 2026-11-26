@@ -151,23 +151,33 @@ def build_preload(original: str) -> str:
         // wrapper is sized by the app's own rules and forcing width:auto collapses
         // it to a few pixels, so our overrides are removed instead of applied.
         function fit(){try{
-          var t=document.querySelector('.workspace-transcript-content');
-          var csel=['.composer-box','.composer.workspace-composer'];
-          if(t){
-            if(t.style.width!=='auto')t.style.width='auto';
-            if(t.style.maxWidth!=='none')t.style.maxWidth='none';
-            if(t.style.marginLeft!=='24px')t.style.marginLeft='24px';
-            if(t.style.marginRight!=='24px')t.style.marginRight='24px';
-            for(var i=0;i<csel.length;i++){
-              var e=document.querySelector(csel[i]);
-              if(!e)continue;
+          // The app keeps transcript containers for other tabs mounted in the
+          // DOM, so querySelector() can pick a hidden one and leave the actual
+          // 720 px transcript untouched - that is why some sessions fill the
+          // pane and others stay narrow. Style every match; hidden ones are
+          // harmless and the visible one is guaranteed to be covered.
+          var ts=document.querySelectorAll('.workspace-transcript-content');
+          var cs=document.querySelectorAll('.composer-box,.composer.workspace-composer');
+          // A hidden transcript left over from another tab must not make us
+          // apply width:auto to the empty state's composer: there it collapses
+          // the input to a few pixels. Only a *visible* transcript means we are
+          // inside a conversation.
+          var have=false;
+          for(var h=0;h<ts.length;h++){if(ts[h].offsetParent){have=true;break;}}
+          if(have){
+            for(var i=0;i<ts.length;i++){var t=ts[i];
+              if(t.style.width!=='auto')t.style.width='auto';
+              if(t.style.maxWidth!=='none')t.style.maxWidth='none';
+              if(t.style.marginLeft!=='24px')t.style.marginLeft='24px';
+              if(t.style.marginRight!=='24px')t.style.marginRight='24px';
+            }
+            for(var j=0;j<cs.length;j++){var e=cs[j];
+              if(!e.offsetParent)continue;
               if(e.style.width!=='auto')e.style.width='auto';
               if(e.style.maxWidth!=='none')e.style.maxWidth='none';
             }
           } else {
-            for(var j=0;j<csel.length;j++){
-              var c=document.querySelector(csel[j]);
-              if(!c)continue;
+            for(var k=0;k<cs.length;k++){var c=cs[k];
               if(c.style.width)c.style.width='';
               if(c.style.maxWidth)c.style.maxWidth='';
             }
